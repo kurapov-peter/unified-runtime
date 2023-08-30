@@ -2,7 +2,9 @@
  *
  * Copyright (C) 2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file ur_params.hpp
  *
@@ -15,6 +17,29 @@
 #include <ostream>
 
 namespace ur_params {
+template <typename T> struct is_handle : std::false_type {};
+template <> struct is_handle<ur_loader_config_handle_t> : std::true_type {};
+template <> struct is_handle<ur_adapter_handle_t> : std::true_type {};
+template <> struct is_handle<ur_platform_handle_t> : std::true_type {};
+template <> struct is_handle<ur_device_handle_t> : std::true_type {};
+template <> struct is_handle<ur_context_handle_t> : std::true_type {};
+template <> struct is_handle<ur_event_handle_t> : std::true_type {};
+template <> struct is_handle<ur_program_handle_t> : std::true_type {};
+template <> struct is_handle<ur_kernel_handle_t> : std::true_type {};
+template <> struct is_handle<ur_queue_handle_t> : std::true_type {};
+template <> struct is_handle<ur_native_handle_t> : std::true_type {};
+template <> struct is_handle<ur_sampler_handle_t> : std::true_type {};
+template <> struct is_handle<ur_mem_handle_t> : std::true_type {};
+template <> struct is_handle<ur_physical_mem_handle_t> : std::true_type {};
+template <> struct is_handle<ur_usm_pool_handle_t> : std::true_type {};
+template <> struct is_handle<ur_exp_image_handle_t> : std::true_type {};
+template <> struct is_handle<ur_exp_image_mem_handle_t> : std::true_type {};
+template <> struct is_handle<ur_exp_interop_mem_handle_t> : std::true_type {};
+template <>
+struct is_handle<ur_exp_interop_semaphore_handle_t> : std::true_type {};
+template <>
+struct is_handle<ur_exp_command_buffer_handle_t> : std::true_type {};
+template <typename T> inline constexpr bool is_handle_v = is_handle<T>::value;
 template <typename T> inline void serializePtr(std::ostream &os, T *ptr);
 template <typename T>
 inline void serializeFlag(std::ostream &os, uint32_t flag);
@@ -30,6 +55,14 @@ inline void serializeFlag<ur_device_init_flag_t>(std::ostream &os,
 
 template <>
 inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_loader_config_info_t value, size_t size);
+
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_adapter_info_t value, size_t size);
+
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
                             ur_platform_info_t value, size_t size);
 
 template <>
@@ -37,15 +70,19 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
                             ur_device_info_t value, size_t size);
 
 template <>
+inline void serializeFlag<ur_device_affinity_domain_flag_t>(std::ostream &os,
+                                                            uint32_t flag);
+
+inline void serializeUnion(std::ostream &os,
+                           const union ur_device_partition_value_t params,
+                           const enum ur_device_partition_t tag);
+
+template <>
 inline void serializeFlag<ur_device_fp_capability_flag_t>(std::ostream &os,
                                                           uint32_t flag);
 
 template <>
 inline void serializeFlag<ur_device_exec_capability_flag_t>(std::ostream &os,
-                                                            uint32_t flag);
-
-template <>
-inline void serializeFlag<ur_device_affinity_domain_flag_t>(std::ostream &os,
                                                             uint32_t flag);
 
 template <>
@@ -108,6 +145,27 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
 
 template <>
 inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_virtual_mem_granularity_info_t value,
+                            size_t size);
+
+template <>
+inline void serializeFlag<ur_virtual_mem_access_flag_t>(std::ostream &os,
+                                                        uint32_t flag);
+
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_virtual_mem_info_t value, size_t size);
+
+template <>
+inline void serializeFlag<ur_physical_mem_flag_t>(std::ostream &os,
+                                                  uint32_t flag);
+
+inline void serializeUnion(std::ostream &os,
+                           const union ur_program_metadata_value_t params,
+                           const enum ur_program_metadata_type_t tag);
+
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
                             ur_program_info_t value, size_t size);
 
 template <>
@@ -152,11 +210,20 @@ template <>
 inline void serializeFlag<ur_usm_migration_flag_t>(std::ostream &os,
                                                    uint32_t flag);
 
+template <>
+inline void serializeFlag<ur_exp_image_copy_flag_t>(std::ostream &os,
+                                                    uint32_t flag);
+
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_exp_peer_info_t value, size_t size);
+
 } // namespace ur_params
 
-inline std::ostream &operator<<(std::ostream &os, enum ur_result_t value);
+inline std::ostream &operator<<(std::ostream &os, enum ur_function_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_structure_type_t value);
+inline std::ostream &operator<<(std::ostream &os, enum ur_result_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_base_properties_t params);
 inline std::ostream &operator<<(std::ostream &os,
@@ -167,6 +234,11 @@ inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_rect_region_t params);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_device_init_flag_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_loader_config_info_t value);
+inline std::ostream &operator<<(std::ostream &os, enum ur_adapter_info_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_adapter_backend_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_platform_info_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ur_api_version_t value);
@@ -180,7 +252,15 @@ inline std::ostream &operator<<(std::ostream &os,
 inline std::ostream &operator<<(std::ostream &os, enum ur_device_type_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ur_device_info_t value);
 inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_device_affinity_domain_flag_t value);
+inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_device_partition_t value);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_device_partition_property_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_device_partition_properties_t params);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_device_fp_capability_flag_t value);
 inline std::ostream &operator<<(std::ostream &os,
@@ -189,8 +269,6 @@ inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_device_local_mem_type_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_device_exec_capability_flag_t value);
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ur_device_affinity_domain_flag_t value);
 inline std::ostream &
 operator<<(std::ostream &os, const struct ur_device_native_properties_t params);
 inline std::ostream &operator<<(std::ostream &os,
@@ -266,9 +344,17 @@ inline std::ostream &operator<<(std::ostream &os,
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_usm_pool_info_t value);
 inline std::ostream &operator<<(std::ostream &os,
-                                enum ur_program_metadata_type_t value);
+                                enum ur_virtual_mem_granularity_info_t value);
 inline std::ostream &operator<<(std::ostream &os,
-                                const union ur_program_metadata_value_t params);
+                                enum ur_virtual_mem_access_flag_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_virtual_mem_info_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_physical_mem_flag_t value);
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_physical_mem_properties_t params);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_program_metadata_type_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_program_metadata_t params);
 inline std::ostream &operator<<(std::ostream &os,
@@ -286,6 +372,12 @@ operator<<(std::ostream &os,
 inline std::ostream &
 operator<<(std::ostream &os,
            const struct ur_program_native_properties_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_value_properties_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_local_properties_t params);
 inline std::ostream &operator<<(std::ostream &os, enum ur_kernel_info_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_kernel_group_info_t value);
@@ -295,6 +387,18 @@ inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_kernel_cache_config_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_kernel_exec_info_t value);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_pointer_properties_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_exec_info_properties_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_sampler_properties_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_mem_obj_properties_t params);
 inline std::ostream &
 operator<<(std::ostream &os, const struct ur_kernel_native_properties_t params);
 inline std::ostream &operator<<(std::ostream &os, enum ur_queue_info_t value);
@@ -316,11 +420,1149 @@ inline std::ostream &
 operator<<(std::ostream &os, const struct ur_event_native_properties_t params);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_execution_info_t value);
-inline std::ostream &operator<<(std::ostream &os, enum ur_function_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ur_map_flag_t value);
 inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_usm_migration_flag_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_exp_image_copy_flag_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_exp_file_descriptor_t params);
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_exp_win32_handle_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_exp_sampler_mip_properties_t params);
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_exp_interop_mem_desc_t params);
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_exp_interop_semaphore_desc_t params);
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_exp_command_buffer_desc_t params);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_exp_peer_info_t value);
 
+inline std::ostream &operator<<(std::ostream &os, enum ur_function_t value) {
+    switch (value) {
+
+    case UR_FUNCTION_CONTEXT_CREATE:
+        os << "UR_FUNCTION_CONTEXT_CREATE";
+        break;
+
+    case UR_FUNCTION_CONTEXT_RETAIN:
+        os << "UR_FUNCTION_CONTEXT_RETAIN";
+        break;
+
+    case UR_FUNCTION_CONTEXT_RELEASE:
+        os << "UR_FUNCTION_CONTEXT_RELEASE";
+        break;
+
+    case UR_FUNCTION_CONTEXT_GET_INFO:
+        os << "UR_FUNCTION_CONTEXT_GET_INFO";
+        break;
+
+    case UR_FUNCTION_CONTEXT_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_CONTEXT_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_CONTEXT_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_CONTEXT_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_CONTEXT_SET_EXTENDED_DELETER:
+        os << "UR_FUNCTION_CONTEXT_SET_EXTENDED_DELETER";
+        break;
+
+    case UR_FUNCTION_DEVICE_GET:
+        os << "UR_FUNCTION_DEVICE_GET";
+        break;
+
+    case UR_FUNCTION_DEVICE_GET_INFO:
+        os << "UR_FUNCTION_DEVICE_GET_INFO";
+        break;
+
+    case UR_FUNCTION_DEVICE_RETAIN:
+        os << "UR_FUNCTION_DEVICE_RETAIN";
+        break;
+
+    case UR_FUNCTION_DEVICE_RELEASE:
+        os << "UR_FUNCTION_DEVICE_RELEASE";
+        break;
+
+    case UR_FUNCTION_DEVICE_PARTITION:
+        os << "UR_FUNCTION_DEVICE_PARTITION";
+        break;
+
+    case UR_FUNCTION_DEVICE_SELECT_BINARY:
+        os << "UR_FUNCTION_DEVICE_SELECT_BINARY";
+        break;
+
+    case UR_FUNCTION_DEVICE_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_DEVICE_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_DEVICE_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_DEVICE_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_DEVICE_GET_GLOBAL_TIMESTAMPS:
+        os << "UR_FUNCTION_DEVICE_GET_GLOBAL_TIMESTAMPS";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_KERNEL_LAUNCH:
+        os << "UR_FUNCTION_ENQUEUE_KERNEL_LAUNCH";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_EVENTS_WAIT:
+        os << "UR_FUNCTION_ENQUEUE_EVENTS_WAIT";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER:
+        os << "UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ_RECT:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ_RECT";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE_RECT:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE_RECT";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY_RECT:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY_RECT";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_FILL:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_FILL";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_IMAGE_READ:
+        os << "UR_FUNCTION_ENQUEUE_MEM_IMAGE_READ";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_IMAGE_WRITE:
+        os << "UR_FUNCTION_ENQUEUE_MEM_IMAGE_WRITE";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_IMAGE_COPY:
+        os << "UR_FUNCTION_ENQUEUE_MEM_IMAGE_COPY";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_MAP:
+        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_MAP";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_MEM_UNMAP:
+        os << "UR_FUNCTION_ENQUEUE_MEM_UNMAP";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_USM_FILL:
+        os << "UR_FUNCTION_ENQUEUE_USM_FILL";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_USM_MEMCPY:
+        os << "UR_FUNCTION_ENQUEUE_USM_MEMCPY";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_USM_PREFETCH:
+        os << "UR_FUNCTION_ENQUEUE_USM_PREFETCH";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_USM_ADVISE:
+        os << "UR_FUNCTION_ENQUEUE_USM_ADVISE";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_WRITE:
+        os << "UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_WRITE";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_READ:
+        os << "UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_READ";
+        break;
+
+    case UR_FUNCTION_EVENT_GET_INFO:
+        os << "UR_FUNCTION_EVENT_GET_INFO";
+        break;
+
+    case UR_FUNCTION_EVENT_GET_PROFILING_INFO:
+        os << "UR_FUNCTION_EVENT_GET_PROFILING_INFO";
+        break;
+
+    case UR_FUNCTION_EVENT_WAIT:
+        os << "UR_FUNCTION_EVENT_WAIT";
+        break;
+
+    case UR_FUNCTION_EVENT_RETAIN:
+        os << "UR_FUNCTION_EVENT_RETAIN";
+        break;
+
+    case UR_FUNCTION_EVENT_RELEASE:
+        os << "UR_FUNCTION_EVENT_RELEASE";
+        break;
+
+    case UR_FUNCTION_EVENT_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_EVENT_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_EVENT_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_EVENT_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_EVENT_SET_CALLBACK:
+        os << "UR_FUNCTION_EVENT_SET_CALLBACK";
+        break;
+
+    case UR_FUNCTION_KERNEL_CREATE:
+        os << "UR_FUNCTION_KERNEL_CREATE";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_ARG_VALUE:
+        os << "UR_FUNCTION_KERNEL_SET_ARG_VALUE";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_ARG_LOCAL:
+        os << "UR_FUNCTION_KERNEL_SET_ARG_LOCAL";
+        break;
+
+    case UR_FUNCTION_KERNEL_GET_INFO:
+        os << "UR_FUNCTION_KERNEL_GET_INFO";
+        break;
+
+    case UR_FUNCTION_KERNEL_GET_GROUP_INFO:
+        os << "UR_FUNCTION_KERNEL_GET_GROUP_INFO";
+        break;
+
+    case UR_FUNCTION_KERNEL_GET_SUB_GROUP_INFO:
+        os << "UR_FUNCTION_KERNEL_GET_SUB_GROUP_INFO";
+        break;
+
+    case UR_FUNCTION_KERNEL_RETAIN:
+        os << "UR_FUNCTION_KERNEL_RETAIN";
+        break;
+
+    case UR_FUNCTION_KERNEL_RELEASE:
+        os << "UR_FUNCTION_KERNEL_RELEASE";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_ARG_POINTER:
+        os << "UR_FUNCTION_KERNEL_SET_ARG_POINTER";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_EXEC_INFO:
+        os << "UR_FUNCTION_KERNEL_SET_EXEC_INFO";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_ARG_SAMPLER:
+        os << "UR_FUNCTION_KERNEL_SET_ARG_SAMPLER";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_ARG_MEM_OBJ:
+        os << "UR_FUNCTION_KERNEL_SET_ARG_MEM_OBJ";
+        break;
+
+    case UR_FUNCTION_KERNEL_SET_SPECIALIZATION_CONSTANTS:
+        os << "UR_FUNCTION_KERNEL_SET_SPECIALIZATION_CONSTANTS";
+        break;
+
+    case UR_FUNCTION_KERNEL_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_KERNEL_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_KERNEL_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_KERNEL_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_MEM_IMAGE_CREATE:
+        os << "UR_FUNCTION_MEM_IMAGE_CREATE";
+        break;
+
+    case UR_FUNCTION_MEM_BUFFER_CREATE:
+        os << "UR_FUNCTION_MEM_BUFFER_CREATE";
+        break;
+
+    case UR_FUNCTION_MEM_RETAIN:
+        os << "UR_FUNCTION_MEM_RETAIN";
+        break;
+
+    case UR_FUNCTION_MEM_RELEASE:
+        os << "UR_FUNCTION_MEM_RELEASE";
+        break;
+
+    case UR_FUNCTION_MEM_BUFFER_PARTITION:
+        os << "UR_FUNCTION_MEM_BUFFER_PARTITION";
+        break;
+
+    case UR_FUNCTION_MEM_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_MEM_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_READ_HOST_PIPE:
+        os << "UR_FUNCTION_ENQUEUE_READ_HOST_PIPE";
+        break;
+
+    case UR_FUNCTION_MEM_GET_INFO:
+        os << "UR_FUNCTION_MEM_GET_INFO";
+        break;
+
+    case UR_FUNCTION_MEM_IMAGE_GET_INFO:
+        os << "UR_FUNCTION_MEM_IMAGE_GET_INFO";
+        break;
+
+    case UR_FUNCTION_PLATFORM_GET:
+        os << "UR_FUNCTION_PLATFORM_GET";
+        break;
+
+    case UR_FUNCTION_PLATFORM_GET_INFO:
+        os << "UR_FUNCTION_PLATFORM_GET_INFO";
+        break;
+
+    case UR_FUNCTION_PLATFORM_GET_API_VERSION:
+        os << "UR_FUNCTION_PLATFORM_GET_API_VERSION";
+        break;
+
+    case UR_FUNCTION_PLATFORM_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_PLATFORM_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_PLATFORM_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_PLATFORM_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_PROGRAM_CREATE_WITH_IL:
+        os << "UR_FUNCTION_PROGRAM_CREATE_WITH_IL";
+        break;
+
+    case UR_FUNCTION_PROGRAM_CREATE_WITH_BINARY:
+        os << "UR_FUNCTION_PROGRAM_CREATE_WITH_BINARY";
+        break;
+
+    case UR_FUNCTION_PROGRAM_BUILD:
+        os << "UR_FUNCTION_PROGRAM_BUILD";
+        break;
+
+    case UR_FUNCTION_PROGRAM_COMPILE:
+        os << "UR_FUNCTION_PROGRAM_COMPILE";
+        break;
+
+    case UR_FUNCTION_PROGRAM_LINK:
+        os << "UR_FUNCTION_PROGRAM_LINK";
+        break;
+
+    case UR_FUNCTION_PROGRAM_RETAIN:
+        os << "UR_FUNCTION_PROGRAM_RETAIN";
+        break;
+
+    case UR_FUNCTION_PROGRAM_RELEASE:
+        os << "UR_FUNCTION_PROGRAM_RELEASE";
+        break;
+
+    case UR_FUNCTION_PROGRAM_GET_FUNCTION_POINTER:
+        os << "UR_FUNCTION_PROGRAM_GET_FUNCTION_POINTER";
+        break;
+
+    case UR_FUNCTION_PROGRAM_GET_INFO:
+        os << "UR_FUNCTION_PROGRAM_GET_INFO";
+        break;
+
+    case UR_FUNCTION_PROGRAM_GET_BUILD_INFO:
+        os << "UR_FUNCTION_PROGRAM_GET_BUILD_INFO";
+        break;
+
+    case UR_FUNCTION_PROGRAM_SET_SPECIALIZATION_CONSTANTS:
+        os << "UR_FUNCTION_PROGRAM_SET_SPECIALIZATION_CONSTANTS";
+        break;
+
+    case UR_FUNCTION_PROGRAM_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_PROGRAM_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_PROGRAM_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_PROGRAM_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_QUEUE_GET_INFO:
+        os << "UR_FUNCTION_QUEUE_GET_INFO";
+        break;
+
+    case UR_FUNCTION_QUEUE_CREATE:
+        os << "UR_FUNCTION_QUEUE_CREATE";
+        break;
+
+    case UR_FUNCTION_QUEUE_RETAIN:
+        os << "UR_FUNCTION_QUEUE_RETAIN";
+        break;
+
+    case UR_FUNCTION_QUEUE_RELEASE:
+        os << "UR_FUNCTION_QUEUE_RELEASE";
+        break;
+
+    case UR_FUNCTION_QUEUE_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_QUEUE_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_QUEUE_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_QUEUE_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_QUEUE_FINISH:
+        os << "UR_FUNCTION_QUEUE_FINISH";
+        break;
+
+    case UR_FUNCTION_QUEUE_FLUSH:
+        os << "UR_FUNCTION_QUEUE_FLUSH";
+        break;
+
+    case UR_FUNCTION_INIT:
+        os << "UR_FUNCTION_INIT";
+        break;
+
+    case UR_FUNCTION_TEAR_DOWN:
+        os << "UR_FUNCTION_TEAR_DOWN";
+        break;
+
+    case UR_FUNCTION_SAMPLER_CREATE:
+        os << "UR_FUNCTION_SAMPLER_CREATE";
+        break;
+
+    case UR_FUNCTION_SAMPLER_RETAIN:
+        os << "UR_FUNCTION_SAMPLER_RETAIN";
+        break;
+
+    case UR_FUNCTION_SAMPLER_RELEASE:
+        os << "UR_FUNCTION_SAMPLER_RELEASE";
+        break;
+
+    case UR_FUNCTION_SAMPLER_GET_INFO:
+        os << "UR_FUNCTION_SAMPLER_GET_INFO";
+        break;
+
+    case UR_FUNCTION_SAMPLER_GET_NATIVE_HANDLE:
+        os << "UR_FUNCTION_SAMPLER_GET_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_SAMPLER_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_SAMPLER_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_USM_HOST_ALLOC:
+        os << "UR_FUNCTION_USM_HOST_ALLOC";
+        break;
+
+    case UR_FUNCTION_USM_DEVICE_ALLOC:
+        os << "UR_FUNCTION_USM_DEVICE_ALLOC";
+        break;
+
+    case UR_FUNCTION_USM_SHARED_ALLOC:
+        os << "UR_FUNCTION_USM_SHARED_ALLOC";
+        break;
+
+    case UR_FUNCTION_USM_FREE:
+        os << "UR_FUNCTION_USM_FREE";
+        break;
+
+    case UR_FUNCTION_USM_GET_MEM_ALLOC_INFO:
+        os << "UR_FUNCTION_USM_GET_MEM_ALLOC_INFO";
+        break;
+
+    case UR_FUNCTION_USM_POOL_CREATE:
+        os << "UR_FUNCTION_USM_POOL_CREATE";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_CREATE_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_CREATE_EXP";
+        break;
+
+    case UR_FUNCTION_PLATFORM_GET_BACKEND_OPTION:
+        os << "UR_FUNCTION_PLATFORM_GET_BACKEND_OPTION";
+        break;
+
+    case UR_FUNCTION_MEM_BUFFER_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_MEM_BUFFER_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_MEM_IMAGE_CREATE_WITH_NATIVE_HANDLE:
+        os << "UR_FUNCTION_MEM_IMAGE_CREATE_WITH_NATIVE_HANDLE";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_WRITE_HOST_PIPE:
+        os << "UR_FUNCTION_ENQUEUE_WRITE_HOST_PIPE";
+        break;
+
+    case UR_FUNCTION_USM_POOL_RETAIN:
+        os << "UR_FUNCTION_USM_POOL_RETAIN";
+        break;
+
+    case UR_FUNCTION_USM_POOL_RELEASE:
+        os << "UR_FUNCTION_USM_POOL_RELEASE";
+        break;
+
+    case UR_FUNCTION_USM_POOL_GET_INFO:
+        os << "UR_FUNCTION_USM_POOL_GET_INFO";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_RETAIN_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_RETAIN_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_RELEASE_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_RELEASE_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_FINALIZE_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_FINALIZE_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_KERNEL_LAUNCH_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_KERNEL_LAUNCH_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_ENQUEUE_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_ENQUEUE_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMCPY_USM_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMCPY_USM_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_COPY_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_COPY_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_COPY_RECT_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_COPY_RECT_EXP";
+        break;
+
+    case UR_FUNCTION_USM_PITCHED_ALLOC_EXP:
+        os << "UR_FUNCTION_USM_PITCHED_ALLOC_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_UNSAMPLED_IMAGE_HANDLE_DESTROY_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_UNSAMPLED_IMAGE_HANDLE_DESTROY_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_SAMPLED_IMAGE_HANDLE_DESTROY_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_SAMPLED_IMAGE_HANDLE_DESTROY_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_ALLOCATE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_IMAGE_ALLOCATE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_FREE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_IMAGE_FREE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_UNSAMPLED_IMAGE_CREATE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_UNSAMPLED_IMAGE_CREATE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_SAMPLED_IMAGE_CREATE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_SAMPLED_IMAGE_CREATE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_COPY_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_IMAGE_COPY_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_GET_INFO_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_IMAGE_GET_INFO_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_MIPMAP_GET_LEVEL_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_MIPMAP_GET_LEVEL_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_MIPMAP_FREE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_MIPMAP_FREE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_IMPORT_OPAQUE_FD_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_IMPORT_OPAQUE_FD_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_MAP_EXTERNAL_ARRAY_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_MAP_EXTERNAL_ARRAY_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_RELEASE_INTEROP_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_RELEASE_INTEROP_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_IMPORT_EXTERNAL_SEMAPHORE_OPAQUE_FD_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_IMPORT_EXTERNAL_SEMAPHORE_OPAQUE_FD_"
+              "EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_DESTROY_EXTERNAL_SEMAPHORE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_DESTROY_EXTERNAL_SEMAPHORE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_WAIT_EXTERNAL_SEMAPHORE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_WAIT_EXTERNAL_SEMAPHORE_EXP";
+        break;
+
+    case UR_FUNCTION_BINDLESS_IMAGES_SIGNAL_EXTERNAL_SEMAPHORE_EXP:
+        os << "UR_FUNCTION_BINDLESS_IMAGES_SIGNAL_EXTERNAL_SEMAPHORE_EXP";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_USM_FILL_2D:
+        os << "UR_FUNCTION_ENQUEUE_USM_FILL_2D";
+        break;
+
+    case UR_FUNCTION_ENQUEUE_USM_MEMCPY_2D:
+        os << "UR_FUNCTION_ENQUEUE_USM_MEMCPY_2D";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_GRANULARITY_GET_INFO:
+        os << "UR_FUNCTION_VIRTUAL_MEM_GRANULARITY_GET_INFO";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_RESERVE:
+        os << "UR_FUNCTION_VIRTUAL_MEM_RESERVE";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_FREE:
+        os << "UR_FUNCTION_VIRTUAL_MEM_FREE";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_MAP:
+        os << "UR_FUNCTION_VIRTUAL_MEM_MAP";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_UNMAP:
+        os << "UR_FUNCTION_VIRTUAL_MEM_UNMAP";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_SET_ACCESS:
+        os << "UR_FUNCTION_VIRTUAL_MEM_SET_ACCESS";
+        break;
+
+    case UR_FUNCTION_VIRTUAL_MEM_GET_INFO:
+        os << "UR_FUNCTION_VIRTUAL_MEM_GET_INFO";
+        break;
+
+    case UR_FUNCTION_PHYSICAL_MEM_CREATE:
+        os << "UR_FUNCTION_PHYSICAL_MEM_CREATE";
+        break;
+
+    case UR_FUNCTION_PHYSICAL_MEM_RETAIN:
+        os << "UR_FUNCTION_PHYSICAL_MEM_RETAIN";
+        break;
+
+    case UR_FUNCTION_PHYSICAL_MEM_RELEASE:
+        os << "UR_FUNCTION_PHYSICAL_MEM_RELEASE";
+        break;
+
+    case UR_FUNCTION_USM_IMPORT_EXP:
+        os << "UR_FUNCTION_USM_IMPORT_EXP";
+        break;
+
+    case UR_FUNCTION_USM_RELEASE_EXP:
+        os << "UR_FUNCTION_USM_RELEASE_EXP";
+        break;
+
+    case UR_FUNCTION_USM_P2P_ENABLE_PEER_ACCESS_EXP:
+        os << "UR_FUNCTION_USM_P2P_ENABLE_PEER_ACCESS_EXP";
+        break;
+
+    case UR_FUNCTION_USM_P2P_DISABLE_PEER_ACCESS_EXP:
+        os << "UR_FUNCTION_USM_P2P_DISABLE_PEER_ACCESS_EXP";
+        break;
+
+    case UR_FUNCTION_USM_P2P_PEER_ACCESS_GET_INFO_EXP:
+        os << "UR_FUNCTION_USM_P2P_PEER_ACCESS_GET_INFO_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_WRITE_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_WRITE_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_READ_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_READ_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_WRITE_RECT_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_WRITE_RECT_EXP";
+        break;
+
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_READ_RECT_EXP:
+        os << "UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_READ_RECT_EXP";
+        break;
+
+    case UR_FUNCTION_LOADER_CONFIG_CREATE:
+        os << "UR_FUNCTION_LOADER_CONFIG_CREATE";
+        break;
+
+    case UR_FUNCTION_LOADER_CONFIG_RELEASE:
+        os << "UR_FUNCTION_LOADER_CONFIG_RELEASE";
+        break;
+
+    case UR_FUNCTION_LOADER_CONFIG_RETAIN:
+        os << "UR_FUNCTION_LOADER_CONFIG_RETAIN";
+        break;
+
+    case UR_FUNCTION_LOADER_CONFIG_GET_INFO:
+        os << "UR_FUNCTION_LOADER_CONFIG_GET_INFO";
+        break;
+
+    case UR_FUNCTION_LOADER_CONFIG_ENABLE_LAYER:
+        os << "UR_FUNCTION_LOADER_CONFIG_ENABLE_LAYER";
+        break;
+
+    case UR_FUNCTION_ADAPTER_RELEASE:
+        os << "UR_FUNCTION_ADAPTER_RELEASE";
+        break;
+
+    case UR_FUNCTION_ADAPTER_GET:
+        os << "UR_FUNCTION_ADAPTER_GET";
+        break;
+
+    case UR_FUNCTION_ADAPTER_RETAIN:
+        os << "UR_FUNCTION_ADAPTER_RETAIN";
+        break;
+
+    case UR_FUNCTION_ADAPTER_GET_LAST_ERROR:
+        os << "UR_FUNCTION_ADAPTER_GET_LAST_ERROR";
+        break;
+
+    case UR_FUNCTION_ADAPTER_GET_INFO:
+        os << "UR_FUNCTION_ADAPTER_GET_INFO";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_structure_type_t value) {
+    switch (value) {
+
+    case UR_STRUCTURE_TYPE_CONTEXT_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_CONTEXT_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_IMAGE_DESC:
+        os << "UR_STRUCTURE_TYPE_IMAGE_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_BUFFER_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_REGION:
+        os << "UR_STRUCTURE_TYPE_BUFFER_REGION";
+        break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_CHANNEL_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_BUFFER_CHANNEL_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_ALLOC_LOCATION_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_BUFFER_ALLOC_LOCATION_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_PROGRAM_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_PROGRAM_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_USM_DESC:
+        os << "UR_STRUCTURE_TYPE_USM_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_USM_HOST_DESC:
+        os << "UR_STRUCTURE_TYPE_USM_HOST_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_USM_DEVICE_DESC:
+        os << "UR_STRUCTURE_TYPE_USM_DEVICE_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_USM_POOL_DESC:
+        os << "UR_STRUCTURE_TYPE_USM_POOL_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_USM_POOL_LIMITS_DESC:
+        os << "UR_STRUCTURE_TYPE_USM_POOL_LIMITS_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_DEVICE_BINARY:
+        os << "UR_STRUCTURE_TYPE_DEVICE_BINARY";
+        break;
+
+    case UR_STRUCTURE_TYPE_SAMPLER_DESC:
+        os << "UR_STRUCTURE_TYPE_SAMPLER_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_QUEUE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_INDEX_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_QUEUE_INDEX_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_CONTEXT_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_CONTEXT_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_QUEUE_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_MEM_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_MEM_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_EVENT_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_EVENT_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_PLATFORM_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_PLATFORM_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_DEVICE_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_DEVICE_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_PROGRAM_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_PROGRAM_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_SAMPLER_NATIVE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_SAMPLER_NATIVE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_DESC:
+        os << "UR_STRUCTURE_TYPE_QUEUE_NATIVE_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_DEVICE_PARTITION_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_DEVICE_PARTITION_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_MEM_OBJ_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_ARG_MEM_OBJ_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_PHYSICAL_MEM_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_PHYSICAL_MEM_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_POINTER_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_ARG_POINTER_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_SAMPLER_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_ARG_SAMPLER_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_EXEC_INFO_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_EXEC_INFO_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_VALUE_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_ARG_VALUE_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_LOCAL_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_KERNEL_ARG_LOCAL_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_EXP_COMMAND_BUFFER_DESC:
+        os << "UR_STRUCTURE_TYPE_EXP_COMMAND_BUFFER_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_EXP_SAMPLER_MIP_PROPERTIES:
+        os << "UR_STRUCTURE_TYPE_EXP_SAMPLER_MIP_PROPERTIES";
+        break;
+
+    case UR_STRUCTURE_TYPE_EXP_INTEROP_MEM_DESC:
+        os << "UR_STRUCTURE_TYPE_EXP_INTEROP_MEM_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_EXP_INTEROP_SEMAPHORE_DESC:
+        os << "UR_STRUCTURE_TYPE_EXP_INTEROP_SEMAPHORE_DESC";
+        break;
+
+    case UR_STRUCTURE_TYPE_EXP_FILE_DESCRIPTOR:
+        os << "UR_STRUCTURE_TYPE_EXP_FILE_DESCRIPTOR";
+        break;
+
+    case UR_STRUCTURE_TYPE_EXP_WIN32_HANDLE:
+        os << "UR_STRUCTURE_TYPE_EXP_WIN32_HANDLE";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+inline void serializeStruct(std::ostream &os, const void *ptr) {
+    if (ptr == NULL) {
+        ur_params::serializePtr(os, ptr);
+        return;
+    }
+
+    enum ur_structure_type_t *value = (enum ur_structure_type_t *)ptr;
+    switch (*value) {
+
+    case UR_STRUCTURE_TYPE_CONTEXT_PROPERTIES: {
+        const ur_context_properties_t *pstruct =
+            (const ur_context_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_IMAGE_DESC: {
+        const ur_image_desc_t *pstruct = (const ur_image_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_PROPERTIES: {
+        const ur_buffer_properties_t *pstruct =
+            (const ur_buffer_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_REGION: {
+        const ur_buffer_region_t *pstruct = (const ur_buffer_region_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_CHANNEL_PROPERTIES: {
+        const ur_buffer_channel_properties_t *pstruct =
+            (const ur_buffer_channel_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_BUFFER_ALLOC_LOCATION_PROPERTIES: {
+        const ur_buffer_alloc_location_properties_t *pstruct =
+            (const ur_buffer_alloc_location_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_PROGRAM_PROPERTIES: {
+        const ur_program_properties_t *pstruct =
+            (const ur_program_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_USM_DESC: {
+        const ur_usm_desc_t *pstruct = (const ur_usm_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_USM_HOST_DESC: {
+        const ur_usm_host_desc_t *pstruct = (const ur_usm_host_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_USM_DEVICE_DESC: {
+        const ur_usm_device_desc_t *pstruct = (const ur_usm_device_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_USM_POOL_DESC: {
+        const ur_usm_pool_desc_t *pstruct = (const ur_usm_pool_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_USM_POOL_LIMITS_DESC: {
+        const ur_usm_pool_limits_desc_t *pstruct =
+            (const ur_usm_pool_limits_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_DEVICE_BINARY: {
+        const ur_device_binary_t *pstruct = (const ur_device_binary_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_SAMPLER_DESC: {
+        const ur_sampler_desc_t *pstruct = (const ur_sampler_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_PROPERTIES: {
+        const ur_queue_properties_t *pstruct =
+            (const ur_queue_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_INDEX_PROPERTIES: {
+        const ur_queue_index_properties_t *pstruct =
+            (const ur_queue_index_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_CONTEXT_NATIVE_PROPERTIES: {
+        const ur_context_native_properties_t *pstruct =
+            (const ur_context_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_NATIVE_PROPERTIES: {
+        const ur_kernel_native_properties_t *pstruct =
+            (const ur_kernel_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_PROPERTIES: {
+        const ur_queue_native_properties_t *pstruct =
+            (const ur_queue_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_MEM_NATIVE_PROPERTIES: {
+        const ur_mem_native_properties_t *pstruct =
+            (const ur_mem_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EVENT_NATIVE_PROPERTIES: {
+        const ur_event_native_properties_t *pstruct =
+            (const ur_event_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_PLATFORM_NATIVE_PROPERTIES: {
+        const ur_platform_native_properties_t *pstruct =
+            (const ur_platform_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_DEVICE_NATIVE_PROPERTIES: {
+        const ur_device_native_properties_t *pstruct =
+            (const ur_device_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_PROGRAM_NATIVE_PROPERTIES: {
+        const ur_program_native_properties_t *pstruct =
+            (const ur_program_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_SAMPLER_NATIVE_PROPERTIES: {
+        const ur_sampler_native_properties_t *pstruct =
+            (const ur_sampler_native_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_DESC: {
+        const ur_queue_native_desc_t *pstruct =
+            (const ur_queue_native_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_DEVICE_PARTITION_PROPERTIES: {
+        const ur_device_partition_properties_t *pstruct =
+            (const ur_device_partition_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_MEM_OBJ_PROPERTIES: {
+        const ur_kernel_arg_mem_obj_properties_t *pstruct =
+            (const ur_kernel_arg_mem_obj_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_PHYSICAL_MEM_PROPERTIES: {
+        const ur_physical_mem_properties_t *pstruct =
+            (const ur_physical_mem_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_POINTER_PROPERTIES: {
+        const ur_kernel_arg_pointer_properties_t *pstruct =
+            (const ur_kernel_arg_pointer_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_SAMPLER_PROPERTIES: {
+        const ur_kernel_arg_sampler_properties_t *pstruct =
+            (const ur_kernel_arg_sampler_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_EXEC_INFO_PROPERTIES: {
+        const ur_kernel_exec_info_properties_t *pstruct =
+            (const ur_kernel_exec_info_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_VALUE_PROPERTIES: {
+        const ur_kernel_arg_value_properties_t *pstruct =
+            (const ur_kernel_arg_value_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_KERNEL_ARG_LOCAL_PROPERTIES: {
+        const ur_kernel_arg_local_properties_t *pstruct =
+            (const ur_kernel_arg_local_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EXP_COMMAND_BUFFER_DESC: {
+        const ur_exp_command_buffer_desc_t *pstruct =
+            (const ur_exp_command_buffer_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EXP_SAMPLER_MIP_PROPERTIES: {
+        const ur_exp_sampler_mip_properties_t *pstruct =
+            (const ur_exp_sampler_mip_properties_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EXP_INTEROP_MEM_DESC: {
+        const ur_exp_interop_mem_desc_t *pstruct =
+            (const ur_exp_interop_mem_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EXP_INTEROP_SEMAPHORE_DESC: {
+        const ur_exp_interop_semaphore_desc_t *pstruct =
+            (const ur_exp_interop_semaphore_desc_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EXP_FILE_DESCRIPTOR: {
+        const ur_exp_file_descriptor_t *pstruct =
+            (const ur_exp_file_descriptor_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+
+    case UR_STRUCTURE_TYPE_EXP_WIN32_HANDLE: {
+        const ur_exp_win32_handle_t *pstruct =
+            (const ur_exp_win32_handle_t *)ptr;
+        ur_params::serializePtr(os, pstruct);
+    } break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+}
+} // namespace ur_params
 inline std::ostream &operator<<(std::ostream &os, enum ur_result_t value) {
     switch (value) {
 
@@ -596,6 +1838,22 @@ inline std::ostream &operator<<(std::ostream &os, enum ur_result_t value) {
         os << "UR_RESULT_ERROR_ADAPTER_SPECIFIC";
         break;
 
+    case UR_RESULT_ERROR_LAYER_NOT_PRESENT:
+        os << "UR_RESULT_ERROR_LAYER_NOT_PRESENT";
+        break;
+
+    case UR_RESULT_ERROR_INVALID_COMMAND_BUFFER_EXP:
+        os << "UR_RESULT_ERROR_INVALID_COMMAND_BUFFER_EXP";
+        break;
+
+    case UR_RESULT_ERROR_INVALID_COMMAND_BUFFER_SYNC_POINT_EXP:
+        os << "UR_RESULT_ERROR_INVALID_COMMAND_BUFFER_SYNC_POINT_EXP";
+        break;
+
+    case UR_RESULT_ERROR_INVALID_COMMAND_BUFFER_SYNC_POINT_WAIT_LIST_EXP:
+        os << "UR_RESULT_ERROR_INVALID_COMMAND_BUFFER_SYNC_POINT_WAIT_LIST_EXP";
+        break;
+
     case UR_RESULT_ERROR_UNKNOWN:
         os << "UR_RESULT_ERROR_UNKNOWN";
         break;
@@ -605,282 +1863,6 @@ inline std::ostream &operator<<(std::ostream &os, enum ur_result_t value) {
     }
     return os;
 }
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ur_structure_type_t value) {
-    switch (value) {
-
-    case UR_STRUCTURE_TYPE_CONTEXT_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_CONTEXT_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_IMAGE_DESC:
-        os << "UR_STRUCTURE_TYPE_IMAGE_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_BUFFER_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_REGION:
-        os << "UR_STRUCTURE_TYPE_BUFFER_REGION";
-        break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_CHANNEL_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_BUFFER_CHANNEL_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_ALLOC_LOCATION_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_BUFFER_ALLOC_LOCATION_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_PROGRAM_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_PROGRAM_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_USM_DESC:
-        os << "UR_STRUCTURE_TYPE_USM_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_USM_HOST_DESC:
-        os << "UR_STRUCTURE_TYPE_USM_HOST_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_USM_DEVICE_DESC:
-        os << "UR_STRUCTURE_TYPE_USM_DEVICE_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_USM_POOL_DESC:
-        os << "UR_STRUCTURE_TYPE_USM_POOL_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_USM_POOL_LIMITS_DESC:
-        os << "UR_STRUCTURE_TYPE_USM_POOL_LIMITS_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_DEVICE_BINARY:
-        os << "UR_STRUCTURE_TYPE_DEVICE_BINARY";
-        break;
-
-    case UR_STRUCTURE_TYPE_SAMPLER_DESC:
-        os << "UR_STRUCTURE_TYPE_SAMPLER_DESC";
-        break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_QUEUE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_INDEX_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_QUEUE_INDEX_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_CONTEXT_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_CONTEXT_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_KERNEL_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_KERNEL_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_QUEUE_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_MEM_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_MEM_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_EVENT_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_EVENT_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_PLATFORM_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_PLATFORM_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_DEVICE_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_DEVICE_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_PROGRAM_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_PROGRAM_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_SAMPLER_NATIVE_PROPERTIES:
-        os << "UR_STRUCTURE_TYPE_SAMPLER_NATIVE_PROPERTIES";
-        break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_DESC:
-        os << "UR_STRUCTURE_TYPE_QUEUE_NATIVE_DESC";
-        break;
-    default:
-        os << "unknown enumerator";
-        break;
-    }
-    return os;
-}
-namespace ur_params {
-inline void serializeStruct(std::ostream &os, const void *ptr) {
-    if (ptr == NULL) {
-        ur_params::serializePtr(os, ptr);
-        return;
-    }
-
-    enum ur_structure_type_t *value = (enum ur_structure_type_t *)ptr;
-    switch (*value) {
-
-    case UR_STRUCTURE_TYPE_CONTEXT_PROPERTIES: {
-        const ur_context_properties_t *pstruct =
-            (const ur_context_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_IMAGE_DESC: {
-        const ur_image_desc_t *pstruct = (const ur_image_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_PROPERTIES: {
-        const ur_buffer_properties_t *pstruct =
-            (const ur_buffer_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_REGION: {
-        const ur_buffer_region_t *pstruct = (const ur_buffer_region_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_CHANNEL_PROPERTIES: {
-        const ur_buffer_channel_properties_t *pstruct =
-            (const ur_buffer_channel_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_BUFFER_ALLOC_LOCATION_PROPERTIES: {
-        const ur_buffer_alloc_location_properties_t *pstruct =
-            (const ur_buffer_alloc_location_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_PROGRAM_PROPERTIES: {
-        const ur_program_properties_t *pstruct =
-            (const ur_program_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_USM_DESC: {
-        const ur_usm_desc_t *pstruct = (const ur_usm_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_USM_HOST_DESC: {
-        const ur_usm_host_desc_t *pstruct = (const ur_usm_host_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_USM_DEVICE_DESC: {
-        const ur_usm_device_desc_t *pstruct = (const ur_usm_device_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_USM_POOL_DESC: {
-        const ur_usm_pool_desc_t *pstruct = (const ur_usm_pool_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_USM_POOL_LIMITS_DESC: {
-        const ur_usm_pool_limits_desc_t *pstruct =
-            (const ur_usm_pool_limits_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_DEVICE_BINARY: {
-        const ur_device_binary_t *pstruct = (const ur_device_binary_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_SAMPLER_DESC: {
-        const ur_sampler_desc_t *pstruct = (const ur_sampler_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_PROPERTIES: {
-        const ur_queue_properties_t *pstruct =
-            (const ur_queue_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_INDEX_PROPERTIES: {
-        const ur_queue_properties_t *pstruct =
-            (const ur_queue_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_CONTEXT_NATIVE_PROPERTIES: {
-        const ur_context_native_properties_t *pstruct =
-            (const ur_context_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_KERNEL_NATIVE_PROPERTIES: {
-        const ur_kernel_native_properties_t *pstruct =
-            (const ur_kernel_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_PROPERTIES: {
-        const ur_queue_native_properties_t *pstruct =
-            (const ur_queue_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_MEM_NATIVE_PROPERTIES: {
-        const ur_mem_native_properties_t *pstruct =
-            (const ur_mem_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_EVENT_NATIVE_PROPERTIES: {
-        const ur_event_native_properties_t *pstruct =
-            (const ur_event_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_PLATFORM_NATIVE_PROPERTIES: {
-        const ur_platform_native_properties_t *pstruct =
-            (const ur_platform_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_DEVICE_NATIVE_PROPERTIES: {
-        const ur_device_native_properties_t *pstruct =
-            (const ur_device_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_PROGRAM_NATIVE_PROPERTIES: {
-        const ur_program_native_properties_t *pstruct =
-            (const ur_program_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_SAMPLER_NATIVE_PROPERTIES: {
-        const ur_sampler_native_properties_t *pstruct =
-            (const ur_sampler_native_properties_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-
-    case UR_STRUCTURE_TYPE_QUEUE_NATIVE_DESC: {
-        const ur_queue_native_desc_t *pstruct =
-            (const ur_queue_native_desc_t *)ptr;
-        ur_params::serializePtr(os, pstruct);
-    } break;
-    default:
-        os << "unknown enumerator";
-        break;
-    }
-}
-} // namespace ur_params
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_base_properties_t params) {
     os << "(struct ur_base_properties_t){";
@@ -1054,6 +2036,153 @@ inline void serializeFlag<ur_device_init_flag_t>(std::ostream &os,
 }
 } // namespace ur_params
 inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_loader_config_info_t value) {
+    switch (value) {
+
+    case UR_LOADER_CONFIG_INFO_AVAILABLE_LAYERS:
+        os << "UR_LOADER_CONFIG_INFO_AVAILABLE_LAYERS";
+        break;
+
+    case UR_LOADER_CONFIG_INFO_REFERENCE_COUNT:
+        os << "UR_LOADER_CONFIG_INFO_REFERENCE_COUNT";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_loader_config_info_t value, size_t size) {
+    if (ptr == NULL) {
+        serializePtr(os, ptr);
+        return;
+    }
+
+    switch (value) {
+
+    case UR_LOADER_CONFIG_INFO_AVAILABLE_LAYERS: {
+
+        const char *tptr = (const char *)ptr;
+        serializePtr(os, tptr);
+    } break;
+
+    case UR_LOADER_CONFIG_INFO_REFERENCE_COUNT: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_adapter_info_t value) {
+    switch (value) {
+
+    case UR_ADAPTER_INFO_BACKEND:
+        os << "UR_ADAPTER_INFO_BACKEND";
+        break;
+
+    case UR_ADAPTER_INFO_REFERENCE_COUNT:
+        os << "UR_ADAPTER_INFO_REFERENCE_COUNT";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_adapter_info_t value, size_t size) {
+    if (ptr == NULL) {
+        serializePtr(os, ptr);
+        return;
+    }
+
+    switch (value) {
+
+    case UR_ADAPTER_INFO_BACKEND: {
+        const ur_adapter_backend_t *tptr = (const ur_adapter_backend_t *)ptr;
+        if (sizeof(ur_adapter_backend_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_adapter_backend_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_ADAPTER_INFO_REFERENCE_COUNT: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_adapter_backend_t value) {
+    switch (value) {
+
+    case UR_ADAPTER_BACKEND_UNKNOWN:
+        os << "UR_ADAPTER_BACKEND_UNKNOWN";
+        break;
+
+    case UR_ADAPTER_BACKEND_LEVEL_ZERO:
+        os << "UR_ADAPTER_BACKEND_LEVEL_ZERO";
+        break;
+
+    case UR_ADAPTER_BACKEND_OPENCL:
+        os << "UR_ADAPTER_BACKEND_OPENCL";
+        break;
+
+    case UR_ADAPTER_BACKEND_CUDA:
+        os << "UR_ADAPTER_BACKEND_CUDA";
+        break;
+
+    case UR_ADAPTER_BACKEND_HIP:
+        os << "UR_ADAPTER_BACKEND_HIP";
+        break;
+
+    case UR_ADAPTER_BACKEND_NATIVE_CPU:
+        os << "UR_ADAPTER_BACKEND_NATIVE_CPU";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_platform_info_t value) {
     switch (value) {
 
@@ -1194,6 +2323,10 @@ inline std::ostream &operator<<(std::ostream &os,
 
     case UR_PLATFORM_BACKEND_HIP:
         os << "UR_PLATFORM_BACKEND_HIP";
+        break;
+
+    case UR_PLATFORM_BACKEND_NATIVE_CPU:
+        os << "UR_PLATFORM_BACKEND_NATIVE_CPU";
         break;
     default:
         os << "unknown enumerator";
@@ -1565,8 +2698,8 @@ inline std::ostream &operator<<(std::ostream &os, enum ur_device_info_t value) {
         os << "UR_DEVICE_INFO_PARENT_DEVICE";
         break;
 
-    case UR_DEVICE_INFO_PARTITION_PROPERTIES:
-        os << "UR_DEVICE_INFO_PARTITION_PROPERTIES";
+    case UR_DEVICE_INFO_SUPPORTED_PARTITIONS:
+        os << "UR_DEVICE_INFO_SUPPORTED_PARTITIONS";
         break;
 
     case UR_DEVICE_INFO_PARTITION_MAX_SUB_DEVICES:
@@ -1711,6 +2844,78 @@ inline std::ostream &operator<<(std::ostream &os, enum ur_device_info_t value) {
 
     case UR_DEVICE_INFO_MAX_REGISTERS_PER_WORK_GROUP:
         os << "UR_DEVICE_INFO_MAX_REGISTERS_PER_WORK_GROUP";
+        break;
+
+    case UR_DEVICE_INFO_IP_VERSION:
+        os << "UR_DEVICE_INFO_IP_VERSION";
+        break;
+
+    case UR_DEVICE_INFO_VIRTUAL_MEMORY_SUPPORT:
+        os << "UR_DEVICE_INFO_VIRTUAL_MEMORY_SUPPORT";
+        break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_BINDLESS_IMAGES_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_SHARED_USM_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_BINDLESS_IMAGES_SHARED_USM_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_1D_USM_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_BINDLESS_IMAGES_1D_USM_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_2D_USM_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_BINDLESS_IMAGES_2D_USM_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_IMAGE_PITCH_ALIGN_EXP:
+        os << "UR_DEVICE_INFO_IMAGE_PITCH_ALIGN_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MAX_IMAGE_LINEAR_WIDTH_EXP:
+        os << "UR_DEVICE_INFO_MAX_IMAGE_LINEAR_WIDTH_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MAX_IMAGE_LINEAR_HEIGHT_EXP:
+        os << "UR_DEVICE_INFO_MAX_IMAGE_LINEAR_HEIGHT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MAX_IMAGE_LINEAR_PITCH_EXP:
+        os << "UR_DEVICE_INFO_MAX_IMAGE_LINEAR_PITCH_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MIPMAP_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_MIPMAP_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MIPMAP_ANISOTROPY_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_MIPMAP_ANISOTROPY_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MIPMAP_MAX_ANISOTROPY_EXP:
+        os << "UR_DEVICE_INFO_MIPMAP_MAX_ANISOTROPY_EXP";
+        break;
+
+    case UR_DEVICE_INFO_MIPMAP_LEVEL_REFERENCE_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_MIPMAP_LEVEL_REFERENCE_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_INTEROP_MEMORY_IMPORT_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_INTEROP_MEMORY_IMPORT_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_INTEROP_MEMORY_EXPORT_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_INTEROP_MEMORY_EXPORT_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_INTEROP_SEMAPHORE_IMPORT_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_INTEROP_SEMAPHORE_IMPORT_SUPPORT_EXP";
+        break;
+
+    case UR_DEVICE_INFO_INTEROP_SEMAPHORE_EXPORT_SUPPORT_EXP:
+        os << "UR_DEVICE_INFO_INTEROP_SEMAPHORE_EXPORT_SUPPORT_EXP";
         break;
     default:
         os << "unknown enumerator";
@@ -2732,12 +3937,11 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
         os << ")";
     } break;
 
-    case UR_DEVICE_INFO_PARTITION_PROPERTIES: {
+    case UR_DEVICE_INFO_SUPPORTED_PARTITIONS: {
 
-        const ur_device_partition_property_t *tptr =
-            (const ur_device_partition_property_t *)ptr;
+        const ur_device_partition_t *tptr = (const ur_device_partition_t *)ptr;
         os << "{";
-        size_t nelems = size / sizeof(ur_device_partition_property_t);
+        size_t nelems = size / sizeof(ur_device_partition_t);
         for (size_t i = 0; i < nelems; ++i) {
             if (i != 0) {
                 os << ", ";
@@ -3176,10 +4380,10 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
     } break;
 
     case UR_DEVICE_INFO_MEMORY_BUS_WIDTH: {
-        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
-        if (sizeof(ur_bool_t) > size) {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
             os << "invalid size (is: " << size
-               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+               << ", expected: >=" << sizeof(uint32_t) << ")";
             return;
         }
         os << (void *)(tptr) << " (";
@@ -3259,9 +4463,378 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
 
         os << ")";
     } break;
+
+    case UR_DEVICE_INFO_IP_VERSION: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_VIRTUAL_MEMORY_SUPPORT: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_SHARED_USM_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_1D_USM_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_BINDLESS_IMAGES_2D_USM_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_IMAGE_PITCH_ALIGN_EXP: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MAX_IMAGE_LINEAR_WIDTH_EXP: {
+        const size_t *tptr = (const size_t *)ptr;
+        if (sizeof(size_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(size_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MAX_IMAGE_LINEAR_HEIGHT_EXP: {
+        const size_t *tptr = (const size_t *)ptr;
+        if (sizeof(size_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(size_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MAX_IMAGE_LINEAR_PITCH_EXP: {
+        const size_t *tptr = (const size_t *)ptr;
+        if (sizeof(size_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(size_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MIPMAP_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MIPMAP_ANISOTROPY_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MIPMAP_MAX_ANISOTROPY_EXP: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_MIPMAP_LEVEL_REFERENCE_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_INTEROP_MEMORY_IMPORT_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_INTEROP_MEMORY_EXPORT_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_INTEROP_SEMAPHORE_IMPORT_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_DEVICE_INFO_INTEROP_SEMAPHORE_EXPORT_SUPPORT_EXP: {
+        const ur_bool_t *tptr = (const ur_bool_t *)ptr;
+        if (sizeof(ur_bool_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_bool_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
     default:
         os << "unknown enumerator";
         break;
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_device_affinity_domain_flag_t value) {
+    switch (value) {
+
+    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA:
+        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA";
+        break;
+
+    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE:
+        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE";
+        break;
+
+    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE:
+        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE";
+        break;
+
+    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE:
+        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE";
+        break;
+
+    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE:
+        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE";
+        break;
+
+    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE:
+        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+
+template <>
+inline void serializeFlag<ur_device_affinity_domain_flag_t>(std::ostream &os,
+                                                            uint32_t flag) {
+    uint32_t val = flag;
+    bool first = true;
+
+    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA) ==
+        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA) {
+        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA;
+    }
+
+    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE) ==
+        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE) {
+        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE;
+    }
+
+    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE) ==
+        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE) {
+        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE;
+    }
+
+    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE) ==
+        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE) {
+        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE;
+    }
+
+    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE) ==
+        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE) {
+        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE;
+    }
+
+    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE) ==
+        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE) {
+        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE;
+    }
+    if (val != 0) {
+        std::bitset<32> bits(val);
+        if (!first) {
+            os << " | ";
+        }
+        os << "unknown bit flags " << bits;
+    } else if (first) {
+        os << "0";
     }
 }
 } // namespace ur_params
@@ -3277,10 +4850,6 @@ inline std::ostream &operator<<(std::ostream &os,
         os << "UR_DEVICE_PARTITION_BY_COUNTS";
         break;
 
-    case UR_DEVICE_PARTITION_BY_COUNTS_LIST_END:
-        os << "UR_DEVICE_PARTITION_BY_COUNTS_LIST_END";
-        break;
-
     case UR_DEVICE_PARTITION_BY_AFFINITY_DOMAIN:
         os << "UR_DEVICE_PARTITION_BY_AFFINITY_DOMAIN";
         break;
@@ -3292,6 +4861,85 @@ inline std::ostream &operator<<(std::ostream &os,
         os << "unknown enumerator";
         break;
     }
+    return os;
+}
+
+inline void
+ur_params::serializeUnion(std::ostream &os,
+                          const union ur_device_partition_value_t params,
+                          const enum ur_device_partition_t tag) {
+    os << "(union ur_device_partition_value_t){";
+
+    switch (tag) {
+    case UR_DEVICE_PARTITION_EQUALLY:
+
+        os << ".equally = ";
+
+        os << (params.equally);
+
+        break;
+    case UR_DEVICE_PARTITION_BY_COUNTS:
+
+        os << ".count = ";
+
+        os << (params.count);
+
+        break;
+    case UR_DEVICE_PARTITION_BY_AFFINITY_DOMAIN:
+
+        os << ".affinity_domain = ";
+
+        ur_params::serializeFlag<ur_device_affinity_domain_flag_t>(
+            os, (params.affinity_domain));
+
+        break;
+    default:
+        os << "<unknown>";
+        break;
+    }
+    os << "}";
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_device_partition_property_t params) {
+    os << "(struct ur_device_partition_property_t){";
+
+    os << ".type = ";
+
+    os << (params.type);
+
+    os << ", ";
+    os << ".value = ";
+    ur_params::serializeUnion(os, (params.value), params.type);
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_device_partition_properties_t params) {
+    os << "(struct ur_device_partition_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, (params.pProperties));
+
+    os << ", ";
+    os << ".PropCount = ";
+
+    os << (params.PropCount);
+
+    os << "}";
     return os;
 }
 inline std::ostream &operator<<(std::ostream &os,
@@ -3529,123 +5177,6 @@ inline void serializeFlag<ur_device_exec_capability_flag_t>(std::ostream &os,
             first = false;
         }
         os << UR_DEVICE_EXEC_CAPABILITY_FLAG_NATIVE_KERNEL;
-    }
-    if (val != 0) {
-        std::bitset<32> bits(val);
-        if (!first) {
-            os << " | ";
-        }
-        os << "unknown bit flags " << bits;
-    } else if (first) {
-        os << "0";
-    }
-}
-} // namespace ur_params
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ur_device_affinity_domain_flag_t value) {
-    switch (value) {
-
-    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA:
-        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA";
-        break;
-
-    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE:
-        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE";
-        break;
-
-    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE:
-        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE";
-        break;
-
-    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE:
-        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE";
-        break;
-
-    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE:
-        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE";
-        break;
-
-    case UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE:
-        os << "UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE";
-        break;
-    default:
-        os << "unknown enumerator";
-        break;
-    }
-    return os;
-}
-namespace ur_params {
-
-template <>
-inline void serializeFlag<ur_device_affinity_domain_flag_t>(std::ostream &os,
-                                                            uint32_t flag) {
-    uint32_t val = flag;
-    bool first = true;
-
-    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA) ==
-        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA) {
-        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA;
-        if (!first) {
-            os << " | ";
-        } else {
-            first = false;
-        }
-        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_NUMA;
-    }
-
-    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE) ==
-        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE) {
-        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE;
-        if (!first) {
-            os << " | ";
-        } else {
-            first = false;
-        }
-        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L4_CACHE;
-    }
-
-    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE) ==
-        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE) {
-        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE;
-        if (!first) {
-            os << " | ";
-        } else {
-            first = false;
-        }
-        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L3_CACHE;
-    }
-
-    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE) ==
-        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE) {
-        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE;
-        if (!first) {
-            os << " | ";
-        } else {
-            first = false;
-        }
-        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L2_CACHE;
-    }
-
-    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE) ==
-        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE) {
-        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE;
-        if (!first) {
-            os << " | ";
-        } else {
-            first = false;
-        }
-        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_L1_CACHE;
-    }
-
-    if ((val & UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE) ==
-        (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE) {
-        val ^= (uint32_t)UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE;
-        if (!first) {
-            os << " | ";
-        } else {
-            first = false;
-        }
-        os << UR_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE;
     }
     if (val != 0) {
         std::bitset<32> bits(val);
@@ -5892,6 +7423,248 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
 }
 } // namespace ur_params
 inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_virtual_mem_granularity_info_t value) {
+    switch (value) {
+
+    case UR_VIRTUAL_MEM_GRANULARITY_INFO_MINIMUM:
+        os << "UR_VIRTUAL_MEM_GRANULARITY_INFO_MINIMUM";
+        break;
+
+    case UR_VIRTUAL_MEM_GRANULARITY_INFO_RECOMMENDED:
+        os << "UR_VIRTUAL_MEM_GRANULARITY_INFO_RECOMMENDED";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_virtual_mem_granularity_info_t value,
+                            size_t size) {
+    if (ptr == NULL) {
+        serializePtr(os, ptr);
+        return;
+    }
+
+    switch (value) {
+
+    case UR_VIRTUAL_MEM_GRANULARITY_INFO_MINIMUM: {
+        const size_t *tptr = (const size_t *)ptr;
+        if (sizeof(size_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(size_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_VIRTUAL_MEM_GRANULARITY_INFO_RECOMMENDED: {
+        const size_t *tptr = (const size_t *)ptr;
+        if (sizeof(size_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(size_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_virtual_mem_access_flag_t value) {
+    switch (value) {
+
+    case UR_VIRTUAL_MEM_ACCESS_FLAG_NONE:
+        os << "UR_VIRTUAL_MEM_ACCESS_FLAG_NONE";
+        break;
+
+    case UR_VIRTUAL_MEM_ACCESS_FLAG_READ_WRITE:
+        os << "UR_VIRTUAL_MEM_ACCESS_FLAG_READ_WRITE";
+        break;
+
+    case UR_VIRTUAL_MEM_ACCESS_FLAG_READ_ONLY:
+        os << "UR_VIRTUAL_MEM_ACCESS_FLAG_READ_ONLY";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+
+template <>
+inline void serializeFlag<ur_virtual_mem_access_flag_t>(std::ostream &os,
+                                                        uint32_t flag) {
+    uint32_t val = flag;
+    bool first = true;
+
+    if ((val & UR_VIRTUAL_MEM_ACCESS_FLAG_NONE) ==
+        (uint32_t)UR_VIRTUAL_MEM_ACCESS_FLAG_NONE) {
+        val ^= (uint32_t)UR_VIRTUAL_MEM_ACCESS_FLAG_NONE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_VIRTUAL_MEM_ACCESS_FLAG_NONE;
+    }
+
+    if ((val & UR_VIRTUAL_MEM_ACCESS_FLAG_READ_WRITE) ==
+        (uint32_t)UR_VIRTUAL_MEM_ACCESS_FLAG_READ_WRITE) {
+        val ^= (uint32_t)UR_VIRTUAL_MEM_ACCESS_FLAG_READ_WRITE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_VIRTUAL_MEM_ACCESS_FLAG_READ_WRITE;
+    }
+
+    if ((val & UR_VIRTUAL_MEM_ACCESS_FLAG_READ_ONLY) ==
+        (uint32_t)UR_VIRTUAL_MEM_ACCESS_FLAG_READ_ONLY) {
+        val ^= (uint32_t)UR_VIRTUAL_MEM_ACCESS_FLAG_READ_ONLY;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_VIRTUAL_MEM_ACCESS_FLAG_READ_ONLY;
+    }
+    if (val != 0) {
+        std::bitset<32> bits(val);
+        if (!first) {
+            os << " | ";
+        }
+        os << "unknown bit flags " << bits;
+    } else if (first) {
+        os << "0";
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_virtual_mem_info_t value) {
+    switch (value) {
+
+    case UR_VIRTUAL_MEM_INFO_ACCESS_MODE:
+        os << "UR_VIRTUAL_MEM_INFO_ACCESS_MODE";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_virtual_mem_info_t value, size_t size) {
+    if (ptr == NULL) {
+        serializePtr(os, ptr);
+        return;
+    }
+
+    switch (value) {
+
+    case UR_VIRTUAL_MEM_INFO_ACCESS_MODE: {
+        const ur_virtual_mem_access_flags_t *tptr =
+            (const ur_virtual_mem_access_flags_t *)ptr;
+        if (sizeof(ur_virtual_mem_access_flags_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(ur_virtual_mem_access_flags_t)
+               << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        ur_params::serializeFlag<ur_virtual_mem_access_flag_t>(os, *tptr);
+
+        os << ")";
+    } break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_physical_mem_flag_t value) {
+    switch (value) {
+
+    case UR_PHYSICAL_MEM_FLAG_TBD:
+        os << "UR_PHYSICAL_MEM_FLAG_TBD";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+
+template <>
+inline void serializeFlag<ur_physical_mem_flag_t>(std::ostream &os,
+                                                  uint32_t flag) {
+    uint32_t val = flag;
+    bool first = true;
+
+    if ((val & UR_PHYSICAL_MEM_FLAG_TBD) ==
+        (uint32_t)UR_PHYSICAL_MEM_FLAG_TBD) {
+        val ^= (uint32_t)UR_PHYSICAL_MEM_FLAG_TBD;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_PHYSICAL_MEM_FLAG_TBD;
+    }
+    if (val != 0) {
+        std::bitset<32> bits(val);
+        if (!first) {
+            os << " | ";
+        }
+        os << "unknown bit flags " << bits;
+    } else if (first) {
+        os << "0";
+    }
+}
+} // namespace ur_params
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_physical_mem_properties_t params) {
+    os << "(struct ur_physical_mem_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << ", ";
+    os << ".flags = ";
+
+    ur_params::serializeFlag<ur_physical_mem_flag_t>(os, (params.flags));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &operator<<(std::ostream &os,
                                 enum ur_program_metadata_type_t value) {
     switch (value) {
 
@@ -5916,31 +7689,47 @@ inline std::ostream &operator<<(std::ostream &os,
     }
     return os;
 }
-inline std::ostream &
-operator<<(std::ostream &os, const union ur_program_metadata_value_t params) {
+
+inline void
+ur_params::serializeUnion(std::ostream &os,
+                          const union ur_program_metadata_value_t params,
+                          const enum ur_program_metadata_type_t tag) {
     os << "(union ur_program_metadata_value_t){";
 
-    os << ".data32 = ";
+    switch (tag) {
+    case UR_PROGRAM_METADATA_TYPE_UINT32:
 
-    os << (params.data32);
+        os << ".data32 = ";
 
-    os << ", ";
-    os << ".data64 = ";
+        os << (params.data32);
 
-    os << (params.data64);
+        break;
+    case UR_PROGRAM_METADATA_TYPE_UINT64:
 
-    os << ", ";
-    os << ".pString = ";
+        os << ".data64 = ";
 
-    ur_params::serializePtr(os, (params.pString));
+        os << (params.data64);
 
-    os << ", ";
-    os << ".pData = ";
+        break;
+    case UR_PROGRAM_METADATA_TYPE_STRING:
 
-    ur_params::serializePtr(os, (params.pData));
+        os << ".pString = ";
 
+        ur_params::serializePtr(os, (params.pString));
+
+        break;
+    case UR_PROGRAM_METADATA_TYPE_BYTE_ARRAY:
+
+        os << ".pData = ";
+
+        ur_params::serializePtr(os, (params.pData));
+
+        break;
+    default:
+        os << "<unknown>";
+        break;
+    }
     os << "}";
-    return os;
 }
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_program_metadata_t params) {
@@ -5962,8 +7751,7 @@ inline std::ostream &operator<<(std::ostream &os,
 
     os << ", ";
     os << ".value = ";
-
-    os << (params.value);
+    ur_params::serializeUnion(os, (params.value), params.type);
 
     os << "}";
     return os;
@@ -6338,6 +8126,40 @@ operator<<(std::ostream &os,
     os << ".isNativeHandleOwned = ";
 
     os << (params.isNativeHandleOwned);
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_value_properties_t params) {
+    os << "(struct ur_kernel_arg_value_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_local_properties_t params) {
+    os << "(struct ur_kernel_arg_local_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
 
     os << "}";
     return os;
@@ -6812,6 +8634,79 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
 } // namespace ur_params
 inline std::ostream &
 operator<<(std::ostream &os,
+           const struct ur_kernel_arg_pointer_properties_t params) {
+    os << "(struct ur_kernel_arg_pointer_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_exec_info_properties_t params) {
+    os << "(struct ur_kernel_exec_info_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_sampler_properties_t params) {
+    os << "(struct ur_kernel_arg_sampler_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_kernel_arg_mem_obj_properties_t params) {
+    os << "(struct ur_kernel_arg_mem_obj_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << ", ";
+    os << ".memoryAccess = ";
+
+    ur_params::serializeFlag<ur_mem_flag_t>(os, (params.memoryAccess));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
            const struct ur_kernel_native_properties_t params) {
     os << "(struct ur_kernel_native_properties_t){";
 
@@ -7012,6 +8907,22 @@ inline std::ostream &operator<<(std::ostream &os, enum ur_queue_flag_t value) {
     case UR_QUEUE_FLAG_PRIORITY_HIGH:
         os << "UR_QUEUE_FLAG_PRIORITY_HIGH";
         break;
+
+    case UR_QUEUE_FLAG_SUBMISSION_BATCHED:
+        os << "UR_QUEUE_FLAG_SUBMISSION_BATCHED";
+        break;
+
+    case UR_QUEUE_FLAG_SUBMISSION_IMMEDIATE:
+        os << "UR_QUEUE_FLAG_SUBMISSION_IMMEDIATE";
+        break;
+
+    case UR_QUEUE_FLAG_USE_DEFAULT_STREAM:
+        os << "UR_QUEUE_FLAG_USE_DEFAULT_STREAM";
+        break;
+
+    case UR_QUEUE_FLAG_SYNC_WITH_DEFAULT_STREAM:
+        os << "UR_QUEUE_FLAG_SYNC_WITH_DEFAULT_STREAM";
+        break;
     default:
         os << "unknown enumerator";
         break;
@@ -7099,6 +9010,50 @@ inline void serializeFlag<ur_queue_flag_t>(std::ostream &os, uint32_t flag) {
             first = false;
         }
         os << UR_QUEUE_FLAG_PRIORITY_HIGH;
+    }
+
+    if ((val & UR_QUEUE_FLAG_SUBMISSION_BATCHED) ==
+        (uint32_t)UR_QUEUE_FLAG_SUBMISSION_BATCHED) {
+        val ^= (uint32_t)UR_QUEUE_FLAG_SUBMISSION_BATCHED;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_QUEUE_FLAG_SUBMISSION_BATCHED;
+    }
+
+    if ((val & UR_QUEUE_FLAG_SUBMISSION_IMMEDIATE) ==
+        (uint32_t)UR_QUEUE_FLAG_SUBMISSION_IMMEDIATE) {
+        val ^= (uint32_t)UR_QUEUE_FLAG_SUBMISSION_IMMEDIATE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_QUEUE_FLAG_SUBMISSION_IMMEDIATE;
+    }
+
+    if ((val & UR_QUEUE_FLAG_USE_DEFAULT_STREAM) ==
+        (uint32_t)UR_QUEUE_FLAG_USE_DEFAULT_STREAM) {
+        val ^= (uint32_t)UR_QUEUE_FLAG_USE_DEFAULT_STREAM;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_QUEUE_FLAG_USE_DEFAULT_STREAM;
+    }
+
+    if ((val & UR_QUEUE_FLAG_SYNC_WITH_DEFAULT_STREAM) ==
+        (uint32_t)UR_QUEUE_FLAG_SYNC_WITH_DEFAULT_STREAM) {
+        val ^= (uint32_t)UR_QUEUE_FLAG_SYNC_WITH_DEFAULT_STREAM;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_QUEUE_FLAG_SYNC_WITH_DEFAULT_STREAM;
     }
     if (val != 0) {
         std::bitset<32> bits(val);
@@ -7297,6 +9252,18 @@ inline std::ostream &operator<<(std::ostream &os, enum ur_command_t value) {
     case UR_COMMAND_WRITE_HOST_PIPE:
         os << "UR_COMMAND_WRITE_HOST_PIPE";
         break;
+
+    case UR_COMMAND_COMMAND_BUFFER_ENQUEUE_EXP:
+        os << "UR_COMMAND_COMMAND_BUFFER_ENQUEUE_EXP";
+        break;
+
+    case UR_COMMAND_INTEROP_SEMAPHORE_WAIT_EXP:
+        os << "UR_COMMAND_INTEROP_SEMAPHORE_WAIT_EXP";
+        break;
+
+    case UR_COMMAND_INTEROP_SEMAPHORE_SIGNAL_EXP:
+        os << "UR_COMMAND_INTEROP_SEMAPHORE_SIGNAL_EXP";
+        break;
     default:
         os << "unknown enumerator";
         break;
@@ -7461,6 +9428,10 @@ inline std::ostream &operator<<(std::ostream &os,
     case UR_PROFILING_INFO_COMMAND_END:
         os << "UR_PROFILING_INFO_COMMAND_END";
         break;
+
+    case UR_PROFILING_INFO_COMMAND_COMPLETE:
+        os << "UR_PROFILING_INFO_COMMAND_COMPLETE";
+        break;
     default:
         os << "unknown enumerator";
         break;
@@ -7533,6 +9504,20 @@ inline void serializeTagged(std::ostream &os, const void *ptr,
 
         os << ")";
     } break;
+
+    case UR_PROFILING_INFO_COMMAND_COMPLETE: {
+        const uint64_t *tptr = (const uint64_t *)ptr;
+        if (sizeof(uint64_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint64_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
     default:
         os << "unknown enumerator";
         break;
@@ -7578,490 +9563,6 @@ inline std::ostream &operator<<(std::ostream &os,
 
     case UR_EXECUTION_INFO_EXECUTION_INFO_QUEUED:
         os << "UR_EXECUTION_INFO_EXECUTION_INFO_QUEUED";
-        break;
-    default:
-        os << "unknown enumerator";
-        break;
-    }
-    return os;
-}
-inline std::ostream &operator<<(std::ostream &os, enum ur_function_t value) {
-    switch (value) {
-
-    case UR_FUNCTION_CONTEXT_CREATE:
-        os << "UR_FUNCTION_CONTEXT_CREATE";
-        break;
-
-    case UR_FUNCTION_CONTEXT_RETAIN:
-        os << "UR_FUNCTION_CONTEXT_RETAIN";
-        break;
-
-    case UR_FUNCTION_CONTEXT_RELEASE:
-        os << "UR_FUNCTION_CONTEXT_RELEASE";
-        break;
-
-    case UR_FUNCTION_CONTEXT_GET_INFO:
-        os << "UR_FUNCTION_CONTEXT_GET_INFO";
-        break;
-
-    case UR_FUNCTION_CONTEXT_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_CONTEXT_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_CONTEXT_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_CONTEXT_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_CONTEXT_SET_EXTENDED_DELETER:
-        os << "UR_FUNCTION_CONTEXT_SET_EXTENDED_DELETER";
-        break;
-
-    case UR_FUNCTION_DEVICE_GET:
-        os << "UR_FUNCTION_DEVICE_GET";
-        break;
-
-    case UR_FUNCTION_DEVICE_GET_INFO:
-        os << "UR_FUNCTION_DEVICE_GET_INFO";
-        break;
-
-    case UR_FUNCTION_DEVICE_RETAIN:
-        os << "UR_FUNCTION_DEVICE_RETAIN";
-        break;
-
-    case UR_FUNCTION_DEVICE_RELEASE:
-        os << "UR_FUNCTION_DEVICE_RELEASE";
-        break;
-
-    case UR_FUNCTION_DEVICE_PARTITION:
-        os << "UR_FUNCTION_DEVICE_PARTITION";
-        break;
-
-    case UR_FUNCTION_DEVICE_SELECT_BINARY:
-        os << "UR_FUNCTION_DEVICE_SELECT_BINARY";
-        break;
-
-    case UR_FUNCTION_DEVICE_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_DEVICE_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_DEVICE_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_DEVICE_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_DEVICE_GET_GLOBAL_TIMESTAMPS:
-        os << "UR_FUNCTION_DEVICE_GET_GLOBAL_TIMESTAMPS";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_KERNEL_LAUNCH:
-        os << "UR_FUNCTION_ENQUEUE_KERNEL_LAUNCH";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_EVENTS_WAIT:
-        os << "UR_FUNCTION_ENQUEUE_EVENTS_WAIT";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER:
-        os << "UR_FUNCTION_ENQUEUE_EVENTS_WAIT_WITH_BARRIER";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ_RECT:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_READ_RECT";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE_RECT:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_WRITE_RECT";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY_RECT:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_COPY_RECT";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_FILL:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_FILL";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_IMAGE_READ:
-        os << "UR_FUNCTION_ENQUEUE_MEM_IMAGE_READ";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_IMAGE_WRITE:
-        os << "UR_FUNCTION_ENQUEUE_MEM_IMAGE_WRITE";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_IMAGE_COPY:
-        os << "UR_FUNCTION_ENQUEUE_MEM_IMAGE_COPY";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_BUFFER_MAP:
-        os << "UR_FUNCTION_ENQUEUE_MEM_BUFFER_MAP";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_MEM_UNMAP:
-        os << "UR_FUNCTION_ENQUEUE_MEM_UNMAP";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_USM_FILL:
-        os << "UR_FUNCTION_ENQUEUE_USM_FILL";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_USM_MEMCPY:
-        os << "UR_FUNCTION_ENQUEUE_USM_MEMCPY";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_USM_PREFETCH:
-        os << "UR_FUNCTION_ENQUEUE_USM_PREFETCH";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_USM_ADVISE:
-        os << "UR_FUNCTION_ENQUEUE_USM_ADVISE";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_USM_FILL2_D:
-        os << "UR_FUNCTION_ENQUEUE_USM_FILL2_D";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_USM_MEMCPY2_D:
-        os << "UR_FUNCTION_ENQUEUE_USM_MEMCPY2_D";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_WRITE:
-        os << "UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_WRITE";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_READ:
-        os << "UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_READ";
-        break;
-
-    case UR_FUNCTION_EVENT_GET_INFO:
-        os << "UR_FUNCTION_EVENT_GET_INFO";
-        break;
-
-    case UR_FUNCTION_EVENT_GET_PROFILING_INFO:
-        os << "UR_FUNCTION_EVENT_GET_PROFILING_INFO";
-        break;
-
-    case UR_FUNCTION_EVENT_WAIT:
-        os << "UR_FUNCTION_EVENT_WAIT";
-        break;
-
-    case UR_FUNCTION_EVENT_RETAIN:
-        os << "UR_FUNCTION_EVENT_RETAIN";
-        break;
-
-    case UR_FUNCTION_EVENT_RELEASE:
-        os << "UR_FUNCTION_EVENT_RELEASE";
-        break;
-
-    case UR_FUNCTION_EVENT_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_EVENT_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_EVENT_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_EVENT_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_EVENT_SET_CALLBACK:
-        os << "UR_FUNCTION_EVENT_SET_CALLBACK";
-        break;
-
-    case UR_FUNCTION_KERNEL_CREATE:
-        os << "UR_FUNCTION_KERNEL_CREATE";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_ARG_VALUE:
-        os << "UR_FUNCTION_KERNEL_SET_ARG_VALUE";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_ARG_LOCAL:
-        os << "UR_FUNCTION_KERNEL_SET_ARG_LOCAL";
-        break;
-
-    case UR_FUNCTION_KERNEL_GET_INFO:
-        os << "UR_FUNCTION_KERNEL_GET_INFO";
-        break;
-
-    case UR_FUNCTION_KERNEL_GET_GROUP_INFO:
-        os << "UR_FUNCTION_KERNEL_GET_GROUP_INFO";
-        break;
-
-    case UR_FUNCTION_KERNEL_GET_SUB_GROUP_INFO:
-        os << "UR_FUNCTION_KERNEL_GET_SUB_GROUP_INFO";
-        break;
-
-    case UR_FUNCTION_KERNEL_RETAIN:
-        os << "UR_FUNCTION_KERNEL_RETAIN";
-        break;
-
-    case UR_FUNCTION_KERNEL_RELEASE:
-        os << "UR_FUNCTION_KERNEL_RELEASE";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_ARG_POINTER:
-        os << "UR_FUNCTION_KERNEL_SET_ARG_POINTER";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_EXEC_INFO:
-        os << "UR_FUNCTION_KERNEL_SET_EXEC_INFO";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_ARG_SAMPLER:
-        os << "UR_FUNCTION_KERNEL_SET_ARG_SAMPLER";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_ARG_MEM_OBJ:
-        os << "UR_FUNCTION_KERNEL_SET_ARG_MEM_OBJ";
-        break;
-
-    case UR_FUNCTION_KERNEL_SET_SPECIALIZATION_CONSTANTS:
-        os << "UR_FUNCTION_KERNEL_SET_SPECIALIZATION_CONSTANTS";
-        break;
-
-    case UR_FUNCTION_KERNEL_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_KERNEL_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_KERNEL_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_KERNEL_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_MEM_IMAGE_CREATE:
-        os << "UR_FUNCTION_MEM_IMAGE_CREATE";
-        break;
-
-    case UR_FUNCTION_MEM_BUFFER_CREATE:
-        os << "UR_FUNCTION_MEM_BUFFER_CREATE";
-        break;
-
-    case UR_FUNCTION_MEM_RETAIN:
-        os << "UR_FUNCTION_MEM_RETAIN";
-        break;
-
-    case UR_FUNCTION_MEM_RELEASE:
-        os << "UR_FUNCTION_MEM_RELEASE";
-        break;
-
-    case UR_FUNCTION_MEM_BUFFER_PARTITION:
-        os << "UR_FUNCTION_MEM_BUFFER_PARTITION";
-        break;
-
-    case UR_FUNCTION_MEM_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_MEM_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_READ_HOST_PIPE:
-        os << "UR_FUNCTION_ENQUEUE_READ_HOST_PIPE";
-        break;
-
-    case UR_FUNCTION_MEM_GET_INFO:
-        os << "UR_FUNCTION_MEM_GET_INFO";
-        break;
-
-    case UR_FUNCTION_MEM_IMAGE_GET_INFO:
-        os << "UR_FUNCTION_MEM_IMAGE_GET_INFO";
-        break;
-
-    case UR_FUNCTION_PLATFORM_GET:
-        os << "UR_FUNCTION_PLATFORM_GET";
-        break;
-
-    case UR_FUNCTION_PLATFORM_GET_INFO:
-        os << "UR_FUNCTION_PLATFORM_GET_INFO";
-        break;
-
-    case UR_FUNCTION_PLATFORM_GET_API_VERSION:
-        os << "UR_FUNCTION_PLATFORM_GET_API_VERSION";
-        break;
-
-    case UR_FUNCTION_PLATFORM_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_PLATFORM_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_PLATFORM_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_PLATFORM_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_GET_LAST_RESULT:
-        os << "UR_FUNCTION_GET_LAST_RESULT";
-        break;
-
-    case UR_FUNCTION_PROGRAM_CREATE_WITH_IL:
-        os << "UR_FUNCTION_PROGRAM_CREATE_WITH_IL";
-        break;
-
-    case UR_FUNCTION_PROGRAM_CREATE_WITH_BINARY:
-        os << "UR_FUNCTION_PROGRAM_CREATE_WITH_BINARY";
-        break;
-
-    case UR_FUNCTION_PROGRAM_BUILD:
-        os << "UR_FUNCTION_PROGRAM_BUILD";
-        break;
-
-    case UR_FUNCTION_PROGRAM_COMPILE:
-        os << "UR_FUNCTION_PROGRAM_COMPILE";
-        break;
-
-    case UR_FUNCTION_PROGRAM_LINK:
-        os << "UR_FUNCTION_PROGRAM_LINK";
-        break;
-
-    case UR_FUNCTION_PROGRAM_RETAIN:
-        os << "UR_FUNCTION_PROGRAM_RETAIN";
-        break;
-
-    case UR_FUNCTION_PROGRAM_RELEASE:
-        os << "UR_FUNCTION_PROGRAM_RELEASE";
-        break;
-
-    case UR_FUNCTION_PROGRAM_GET_FUNCTION_POINTER:
-        os << "UR_FUNCTION_PROGRAM_GET_FUNCTION_POINTER";
-        break;
-
-    case UR_FUNCTION_PROGRAM_GET_INFO:
-        os << "UR_FUNCTION_PROGRAM_GET_INFO";
-        break;
-
-    case UR_FUNCTION_PROGRAM_GET_BUILD_INFO:
-        os << "UR_FUNCTION_PROGRAM_GET_BUILD_INFO";
-        break;
-
-    case UR_FUNCTION_PROGRAM_SET_SPECIALIZATION_CONSTANTS:
-        os << "UR_FUNCTION_PROGRAM_SET_SPECIALIZATION_CONSTANTS";
-        break;
-
-    case UR_FUNCTION_PROGRAM_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_PROGRAM_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_PROGRAM_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_PROGRAM_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_QUEUE_GET_INFO:
-        os << "UR_FUNCTION_QUEUE_GET_INFO";
-        break;
-
-    case UR_FUNCTION_QUEUE_CREATE:
-        os << "UR_FUNCTION_QUEUE_CREATE";
-        break;
-
-    case UR_FUNCTION_QUEUE_RETAIN:
-        os << "UR_FUNCTION_QUEUE_RETAIN";
-        break;
-
-    case UR_FUNCTION_QUEUE_RELEASE:
-        os << "UR_FUNCTION_QUEUE_RELEASE";
-        break;
-
-    case UR_FUNCTION_QUEUE_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_QUEUE_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_QUEUE_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_QUEUE_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_QUEUE_FINISH:
-        os << "UR_FUNCTION_QUEUE_FINISH";
-        break;
-
-    case UR_FUNCTION_QUEUE_FLUSH:
-        os << "UR_FUNCTION_QUEUE_FLUSH";
-        break;
-
-    case UR_FUNCTION_INIT:
-        os << "UR_FUNCTION_INIT";
-        break;
-
-    case UR_FUNCTION_TEAR_DOWN:
-        os << "UR_FUNCTION_TEAR_DOWN";
-        break;
-
-    case UR_FUNCTION_SAMPLER_CREATE:
-        os << "UR_FUNCTION_SAMPLER_CREATE";
-        break;
-
-    case UR_FUNCTION_SAMPLER_RETAIN:
-        os << "UR_FUNCTION_SAMPLER_RETAIN";
-        break;
-
-    case UR_FUNCTION_SAMPLER_RELEASE:
-        os << "UR_FUNCTION_SAMPLER_RELEASE";
-        break;
-
-    case UR_FUNCTION_SAMPLER_GET_INFO:
-        os << "UR_FUNCTION_SAMPLER_GET_INFO";
-        break;
-
-    case UR_FUNCTION_SAMPLER_GET_NATIVE_HANDLE:
-        os << "UR_FUNCTION_SAMPLER_GET_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_SAMPLER_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_SAMPLER_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_USM_HOST_ALLOC:
-        os << "UR_FUNCTION_USM_HOST_ALLOC";
-        break;
-
-    case UR_FUNCTION_USM_DEVICE_ALLOC:
-        os << "UR_FUNCTION_USM_DEVICE_ALLOC";
-        break;
-
-    case UR_FUNCTION_USM_SHARED_ALLOC:
-        os << "UR_FUNCTION_USM_SHARED_ALLOC";
-        break;
-
-    case UR_FUNCTION_USM_FREE:
-        os << "UR_FUNCTION_USM_FREE";
-        break;
-
-    case UR_FUNCTION_USM_GET_MEM_ALLOC_INFO:
-        os << "UR_FUNCTION_USM_GET_MEM_ALLOC_INFO";
-        break;
-
-    case UR_FUNCTION_USM_POOL_CREATE:
-        os << "UR_FUNCTION_USM_POOL_CREATE";
-        break;
-
-    case UR_FUNCTION_PLATFORM_GET_BACKEND_OPTION:
-        os << "UR_FUNCTION_PLATFORM_GET_BACKEND_OPTION";
-        break;
-
-    case UR_FUNCTION_MEM_BUFFER_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_MEM_BUFFER_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_MEM_IMAGE_CREATE_WITH_NATIVE_HANDLE:
-        os << "UR_FUNCTION_MEM_IMAGE_CREATE_WITH_NATIVE_HANDLE";
-        break;
-
-    case UR_FUNCTION_ENQUEUE_WRITE_HOST_PIPE:
-        os << "UR_FUNCTION_ENQUEUE_WRITE_HOST_PIPE";
-        break;
-
-    case UR_FUNCTION_USM_POOL_RETAIN:
-        os << "UR_FUNCTION_USM_POOL_RETAIN";
-        break;
-
-    case UR_FUNCTION_USM_POOL_RELEASE:
-        os << "UR_FUNCTION_USM_POOL_RELEASE";
-        break;
-
-    case UR_FUNCTION_USM_POOL_GET_INFO:
-        os << "UR_FUNCTION_USM_POOL_GET_INFO";
         break;
     default:
         os << "unknown enumerator";
@@ -8179,6 +9680,267 @@ inline void serializeFlag<ur_usm_migration_flag_t>(std::ostream &os,
     }
 }
 } // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_exp_image_copy_flag_t value) {
+    switch (value) {
+
+    case UR_EXP_IMAGE_COPY_FLAG_HOST_TO_DEVICE:
+        os << "UR_EXP_IMAGE_COPY_FLAG_HOST_TO_DEVICE";
+        break;
+
+    case UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_HOST:
+        os << "UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_HOST";
+        break;
+
+    case UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_DEVICE:
+        os << "UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_DEVICE";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+
+template <>
+inline void serializeFlag<ur_exp_image_copy_flag_t>(std::ostream &os,
+                                                    uint32_t flag) {
+    uint32_t val = flag;
+    bool first = true;
+
+    if ((val & UR_EXP_IMAGE_COPY_FLAG_HOST_TO_DEVICE) ==
+        (uint32_t)UR_EXP_IMAGE_COPY_FLAG_HOST_TO_DEVICE) {
+        val ^= (uint32_t)UR_EXP_IMAGE_COPY_FLAG_HOST_TO_DEVICE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_EXP_IMAGE_COPY_FLAG_HOST_TO_DEVICE;
+    }
+
+    if ((val & UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_HOST) ==
+        (uint32_t)UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_HOST) {
+        val ^= (uint32_t)UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_HOST;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_HOST;
+    }
+
+    if ((val & UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_DEVICE) ==
+        (uint32_t)UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_DEVICE) {
+        val ^= (uint32_t)UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_DEVICE;
+        if (!first) {
+            os << " | ";
+        } else {
+            first = false;
+        }
+        os << UR_EXP_IMAGE_COPY_FLAG_DEVICE_TO_DEVICE;
+    }
+    if (val != 0) {
+        std::bitset<32> bits(val);
+        if (!first) {
+            os << " | ";
+        }
+        os << "unknown bit flags " << bits;
+    } else if (first) {
+        os << "0";
+    }
+}
+} // namespace ur_params
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_exp_file_descriptor_t params) {
+    os << "(struct ur_exp_file_descriptor_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << ", ";
+    os << ".fd = ";
+
+    os << (params.fd);
+
+    os << "}";
+    return os;
+}
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_exp_win32_handle_t params) {
+    os << "(struct ur_exp_win32_handle_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << ", ";
+    os << ".handle = ";
+
+    ur_params::serializePtr(os, (params.handle));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_exp_sampler_mip_properties_t params) {
+    os << "(struct ur_exp_sampler_mip_properties_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << ", ";
+    os << ".minMipmapLevelClamp = ";
+
+    os << (params.minMipmapLevelClamp);
+
+    os << ", ";
+    os << ".maxMipmapLevelClamp = ";
+
+    os << (params.maxMipmapLevelClamp);
+
+    os << ", ";
+    os << ".maxAnisotropy = ";
+
+    os << (params.maxAnisotropy);
+
+    os << ", ";
+    os << ".mipFilterMode = ";
+
+    os << (params.mipFilterMode);
+
+    os << "}";
+    return os;
+}
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_exp_interop_mem_desc_t params) {
+    os << "(struct ur_exp_interop_mem_desc_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_exp_interop_semaphore_desc_t params) {
+    os << "(struct ur_exp_interop_semaphore_desc_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_exp_command_buffer_desc_t params) {
+    os << "(struct ur_exp_command_buffer_desc_t){";
+
+    os << ".stype = ";
+
+    os << (params.stype);
+
+    os << ", ";
+    os << ".pNext = ";
+
+    ur_params::serializeStruct(os, (params.pNext));
+
+    os << "}";
+    return os;
+}
+inline std::ostream &operator<<(std::ostream &os,
+                                enum ur_exp_peer_info_t value) {
+    switch (value) {
+
+    case UR_EXP_PEER_INFO_UR_PEER_ACCESS_SUPPORTED:
+        os << "UR_EXP_PEER_INFO_UR_PEER_ACCESS_SUPPORTED";
+        break;
+
+    case UR_EXP_PEER_INFO_UR_PEER_ATOMICS_SUPPORTED:
+        os << "UR_EXP_PEER_INFO_UR_PEER_ATOMICS_SUPPORTED";
+        break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+    return os;
+}
+namespace ur_params {
+template <>
+inline void serializeTagged(std::ostream &os, const void *ptr,
+                            ur_exp_peer_info_t value, size_t size) {
+    if (ptr == NULL) {
+        serializePtr(os, ptr);
+        return;
+    }
+
+    switch (value) {
+
+    case UR_EXP_PEER_INFO_UR_PEER_ACCESS_SUPPORTED: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+
+    case UR_EXP_PEER_INFO_UR_PEER_ATOMICS_SUPPORTED: {
+        const uint32_t *tptr = (const uint32_t *)ptr;
+        if (sizeof(uint32_t) > size) {
+            os << "invalid size (is: " << size
+               << ", expected: >=" << sizeof(uint32_t) << ")";
+            return;
+        }
+        os << (void *)(tptr) << " (";
+
+        os << *tptr;
+
+        os << ")";
+    } break;
+    default:
+        os << "unknown enumerator";
+        break;
+    }
+}
+} // namespace ur_params
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_init_params_t *params) {
@@ -8188,20 +9950,10 @@ inline std::ostream &operator<<(std::ostream &os,
     ur_params::serializeFlag<ur_device_init_flag_t>(os,
                                                     *(params->pdevice_flags));
 
-    return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os, const struct ur_get_last_result_params_t *params) {
-
-    os << ".hPlatform = ";
-
-    ur_params::serializePtr(os, *(params->phPlatform));
-
     os << ", ";
-    os << ".ppMessage = ";
+    os << ".hLoaderConfig = ";
 
-    ur_params::serializePtr(os, *(params->pppMessage));
+    ur_params::serializePtr(os, *(params->phLoaderConfig));
 
     return os;
 }
@@ -8212,6 +9964,1214 @@ inline std::ostream &operator<<(std::ostream &os,
     os << ".pParams = ";
 
     ur_params::serializePtr(os, *(params->ppParams));
+
+    return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ur_adapter_get_params_t *params) {
+
+    os << ".NumEntries = ";
+
+    os << *(params->pNumEntries);
+
+    os << ", ";
+    os << ".phAdapters = {";
+    for (size_t i = 0;
+         *(params->pphAdapters) != NULL && i < *params->pNumEntries; ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+
+        ur_params::serializePtr(os, (*(params->pphAdapters))[i]);
+    }
+    os << "}";
+
+    os << ", ";
+    os << ".pNumAdapters = ";
+
+    ur_params::serializePtr(os, *(params->ppNumAdapters));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_adapter_release_params_t *params) {
+
+    os << ".hAdapter = ";
+
+    ur_params::serializePtr(os, *(params->phAdapter));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_adapter_retain_params_t *params) {
+
+    os << ".hAdapter = ";
+
+    ur_params::serializePtr(os, *(params->phAdapter));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_adapter_get_last_error_params_t *params) {
+
+    os << ".hAdapter = ";
+
+    ur_params::serializePtr(os, *(params->phAdapter));
+
+    os << ", ";
+    os << ".ppMessage = ";
+
+    ur_params::serializePtr(os, *(params->pppMessage));
+
+    os << ", ";
+    os << ".pError = ";
+
+    ur_params::serializePtr(os, *(params->ppError));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_adapter_get_info_params_t *params) {
+
+    os << ".hAdapter = ";
+
+    ur_params::serializePtr(os, *(params->phAdapter));
+
+    os << ", ";
+    os << ".propName = ";
+
+    os << *(params->ppropName);
+
+    os << ", ";
+    os << ".propSize = ";
+
+    os << *(params->ppropSize);
+
+    os << ", ";
+    os << ".pPropValue = ";
+    ur_params::serializeTagged(os, *(params->ppPropValue), *(params->ppropName),
+                               *(params->ppropSize));
+
+    os << ", ";
+    os << ".pPropSizeRet = ";
+
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_unsampled_image_handle_destroy_exp_params_t
+        *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hImage = ";
+
+    ur_params::serializePtr(os, *(params->phImage));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_sampled_image_handle_destroy_exp_params_t
+        *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hImage = ";
+
+    ur_params::serializePtr(os, *(params->phImage));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_image_allocate_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".pImageFormat = ";
+
+    ur_params::serializePtr(os, *(params->ppImageFormat));
+
+    os << ", ";
+    os << ".pImageDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppImageDesc));
+
+    os << ", ";
+    os << ".phImageMem = ";
+
+    ur_params::serializePtr(os, *(params->pphImageMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_bindless_images_image_free_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hImageMem = ";
+
+    ur_params::serializePtr(os, *(params->phImageMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_bindless_images_unsampled_image_create_exp_params_t
+               *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hImageMem = ";
+
+    ur_params::serializePtr(os, *(params->phImageMem));
+
+    os << ", ";
+    os << ".pImageFormat = ";
+
+    ur_params::serializePtr(os, *(params->ppImageFormat));
+
+    os << ", ";
+    os << ".pImageDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppImageDesc));
+
+    os << ", ";
+    os << ".phMem = ";
+
+    ur_params::serializePtr(os, *(params->pphMem));
+
+    os << ", ";
+    os << ".phImage = ";
+
+    ur_params::serializePtr(os, *(params->pphImage));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_sampled_image_create_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hImageMem = ";
+
+    ur_params::serializePtr(os, *(params->phImageMem));
+
+    os << ", ";
+    os << ".pImageFormat = ";
+
+    ur_params::serializePtr(os, *(params->ppImageFormat));
+
+    os << ", ";
+    os << ".pImageDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppImageDesc));
+
+    os << ", ";
+    os << ".hSampler = ";
+
+    ur_params::serializePtr(os, *(params->phSampler));
+
+    os << ", ";
+    os << ".phMem = ";
+
+    ur_params::serializePtr(os, *(params->pphMem));
+
+    os << ", ";
+    os << ".phImage = ";
+
+    ur_params::serializePtr(os, *(params->pphImage));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_bindless_images_image_copy_exp_params_t *params) {
+
+    os << ".hQueue = ";
+
+    ur_params::serializePtr(os, *(params->phQueue));
+
+    os << ", ";
+    os << ".pDst = ";
+
+    ur_params::serializePtr(os, *(params->ppDst));
+
+    os << ", ";
+    os << ".pSrc = ";
+
+    ur_params::serializePtr(os, *(params->ppSrc));
+
+    os << ", ";
+    os << ".pImageFormat = ";
+
+    ur_params::serializePtr(os, *(params->ppImageFormat));
+
+    os << ", ";
+    os << ".pImageDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppImageDesc));
+
+    os << ", ";
+    os << ".imageCopyFlags = ";
+
+    ur_params::serializeFlag<ur_exp_image_copy_flag_t>(
+        os, *(params->pimageCopyFlags));
+
+    os << ", ";
+    os << ".srcOffset = ";
+
+    os << *(params->psrcOffset);
+
+    os << ", ";
+    os << ".dstOffset = ";
+
+    os << *(params->pdstOffset);
+
+    os << ", ";
+    os << ".copyExtent = ";
+
+    os << *(params->pcopyExtent);
+
+    os << ", ";
+    os << ".hostExtent = ";
+
+    os << *(params->phostExtent);
+
+    os << ", ";
+    os << ".numEventsInWaitList = ";
+
+    os << *(params->pnumEventsInWaitList);
+
+    os << ", ";
+    os << ".phEventWaitList = {";
+    for (size_t i = 0; *(params->pphEventWaitList) != NULL &&
+                       i < *params->pnumEventsInWaitList;
+         ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+
+        ur_params::serializePtr(os, (*(params->pphEventWaitList))[i]);
+    }
+    os << "}";
+
+    os << ", ";
+    os << ".phEvent = ";
+
+    ur_params::serializePtr(os, *(params->pphEvent));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_image_get_info_exp_params_t *params) {
+
+    os << ".hImageMem = ";
+
+    ur_params::serializePtr(os, *(params->phImageMem));
+
+    os << ", ";
+    os << ".propName = ";
+
+    os << *(params->ppropName);
+
+    os << ", ";
+    os << ".pPropValue = ";
+
+    ur_params::serializePtr(os, *(params->ppPropValue));
+
+    os << ", ";
+    os << ".pPropSizeRet = ";
+
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_mipmap_get_level_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hImageMem = ";
+
+    ur_params::serializePtr(os, *(params->phImageMem));
+
+    os << ", ";
+    os << ".mipmapLevel = ";
+
+    os << *(params->pmipmapLevel);
+
+    os << ", ";
+    os << ".phImageMem = ";
+
+    ur_params::serializePtr(os, *(params->pphImageMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_bindless_images_mipmap_free_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hMem = ";
+
+    ur_params::serializePtr(os, *(params->phMem));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_import_opaque_fd_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".pInteropMemDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppInteropMemDesc));
+
+    os << ", ";
+    os << ".phInteropMem = ";
+
+    ur_params::serializePtr(os, *(params->pphInteropMem));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_map_external_array_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".pImageFormat = ";
+
+    ur_params::serializePtr(os, *(params->ppImageFormat));
+
+    os << ", ";
+    os << ".pImageDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppImageDesc));
+
+    os << ", ";
+    os << ".hInteropMem = ";
+
+    ur_params::serializePtr(os, *(params->phInteropMem));
+
+    os << ", ";
+    os << ".phImageMem = ";
+
+    ur_params::serializePtr(os, *(params->pphImageMem));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_release_interop_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hInteropMem = ";
+
+    ur_params::serializePtr(os, *(params->phInteropMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct
+           ur_bindless_images_import_external_semaphore_opaque_fd_exp_params_t
+               *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".pInteropSemaphoreDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppInteropSemaphoreDesc));
+
+    os << ", ";
+    os << ".phInteropSemaphore = ";
+
+    ur_params::serializePtr(os, *(params->pphInteropSemaphore));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_destroy_external_semaphore_exp_params_t
+        *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".hInteropSemaphore = ";
+
+    ur_params::serializePtr(os, *(params->phInteropSemaphore));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_bindless_images_wait_external_semaphore_exp_params_t
+               *params) {
+
+    os << ".hQueue = ";
+
+    ur_params::serializePtr(os, *(params->phQueue));
+
+    os << ", ";
+    os << ".hSemaphore = ";
+
+    ur_params::serializePtr(os, *(params->phSemaphore));
+
+    os << ", ";
+    os << ".numEventsInWaitList = ";
+
+    os << *(params->pnumEventsInWaitList);
+
+    os << ", ";
+    os << ".phEventWaitList = {";
+    for (size_t i = 0; *(params->pphEventWaitList) != NULL &&
+                       i < *params->pnumEventsInWaitList;
+         ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+
+        ur_params::serializePtr(os, (*(params->pphEventWaitList))[i]);
+    }
+    os << "}";
+
+    os << ", ";
+    os << ".phEvent = ";
+
+    ur_params::serializePtr(os, *(params->pphEvent));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_bindless_images_signal_external_semaphore_exp_params_t
+        *params) {
+
+    os << ".hQueue = ";
+
+    ur_params::serializePtr(os, *(params->phQueue));
+
+    os << ", ";
+    os << ".hSemaphore = ";
+
+    ur_params::serializePtr(os, *(params->phSemaphore));
+
+    os << ", ";
+    os << ".numEventsInWaitList = ";
+
+    os << *(params->pnumEventsInWaitList);
+
+    os << ", ";
+    os << ".phEventWaitList = {";
+    for (size_t i = 0; *(params->pphEventWaitList) != NULL &&
+                       i < *params->pnumEventsInWaitList;
+         ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+
+        ur_params::serializePtr(os, (*(params->pphEventWaitList))[i]);
+    }
+    os << "}";
+
+    os << ", ";
+    os << ".phEvent = ";
+
+    ur_params::serializePtr(os, *(params->pphEvent));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_command_buffer_create_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".pCommandBufferDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppCommandBufferDesc));
+
+    os << ", ";
+    os << ".phCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->pphCommandBuffer));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_command_buffer_retain_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_command_buffer_release_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_command_buffer_finalize_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_kernel_launch_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hKernel = ";
+
+    ur_params::serializePtr(os, *(params->phKernel));
+
+    os << ", ";
+    os << ".workDim = ";
+
+    os << *(params->pworkDim);
+
+    os << ", ";
+    os << ".pGlobalWorkOffset = ";
+
+    ur_params::serializePtr(os, *(params->ppGlobalWorkOffset));
+
+    os << ", ";
+    os << ".pGlobalWorkSize = ";
+
+    ur_params::serializePtr(os, *(params->ppGlobalWorkSize));
+
+    os << ", ";
+    os << ".pLocalWorkSize = ";
+
+    ur_params::serializePtr(os, *(params->ppLocalWorkSize));
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_memcpy_usm_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".pDst = ";
+
+    ur_params::serializePtr(os, *(params->ppDst));
+
+    os << ", ";
+    os << ".pSrc = ";
+
+    ur_params::serializePtr(os, *(params->ppSrc));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_membuffer_copy_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hSrcMem = ";
+
+    ur_params::serializePtr(os, *(params->phSrcMem));
+
+    os << ", ";
+    os << ".hDstMem = ";
+
+    ur_params::serializePtr(os, *(params->phDstMem));
+
+    os << ", ";
+    os << ".srcOffset = ";
+
+    os << *(params->psrcOffset);
+
+    os << ", ";
+    os << ".dstOffset = ";
+
+    os << *(params->pdstOffset);
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_command_buffer_append_membuffer_write_exp_params_t
+               *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phBuffer));
+
+    os << ", ";
+    os << ".offset = ";
+
+    os << *(params->poffset);
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".pSrc = ";
+
+    ur_params::serializePtr(os, *(params->ppSrc));
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_membuffer_read_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phBuffer));
+
+    os << ", ";
+    os << ".offset = ";
+
+    os << *(params->poffset);
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".pDst = ";
+
+    ur_params::serializePtr(os, *(params->ppDst));
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_membuffer_copy_rect_exp_params_t
+        *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hSrcMem = ";
+
+    ur_params::serializePtr(os, *(params->phSrcMem));
+
+    os << ", ";
+    os << ".hDstMem = ";
+
+    ur_params::serializePtr(os, *(params->phDstMem));
+
+    os << ", ";
+    os << ".srcOrigin = ";
+
+    os << *(params->psrcOrigin);
+
+    os << ", ";
+    os << ".dstOrigin = ";
+
+    os << *(params->pdstOrigin);
+
+    os << ", ";
+    os << ".region = ";
+
+    os << *(params->pregion);
+
+    os << ", ";
+    os << ".srcRowPitch = ";
+
+    os << *(params->psrcRowPitch);
+
+    os << ", ";
+    os << ".srcSlicePitch = ";
+
+    os << *(params->psrcSlicePitch);
+
+    os << ", ";
+    os << ".dstRowPitch = ";
+
+    os << *(params->pdstRowPitch);
+
+    os << ", ";
+    os << ".dstSlicePitch = ";
+
+    os << *(params->pdstSlicePitch);
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_membuffer_write_rect_exp_params_t
+        *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phBuffer));
+
+    os << ", ";
+    os << ".bufferOffset = ";
+
+    os << *(params->pbufferOffset);
+
+    os << ", ";
+    os << ".hostOffset = ";
+
+    os << *(params->phostOffset);
+
+    os << ", ";
+    os << ".region = ";
+
+    os << *(params->pregion);
+
+    os << ", ";
+    os << ".bufferRowPitch = ";
+
+    os << *(params->pbufferRowPitch);
+
+    os << ", ";
+    os << ".bufferSlicePitch = ";
+
+    os << *(params->pbufferSlicePitch);
+
+    os << ", ";
+    os << ".hostRowPitch = ";
+
+    os << *(params->phostRowPitch);
+
+    os << ", ";
+    os << ".hostSlicePitch = ";
+
+    os << *(params->phostSlicePitch);
+
+    os << ", ";
+    os << ".pSrc = ";
+
+    ur_params::serializePtr(os, *(params->ppSrc));
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &operator<<(
+    std::ostream &os,
+    const struct ur_command_buffer_append_membuffer_read_rect_exp_params_t
+        *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phBuffer));
+
+    os << ", ";
+    os << ".bufferOffset = ";
+
+    os << *(params->pbufferOffset);
+
+    os << ", ";
+    os << ".hostOffset = ";
+
+    os << *(params->phostOffset);
+
+    os << ", ";
+    os << ".region = ";
+
+    os << *(params->pregion);
+
+    os << ", ";
+    os << ".bufferRowPitch = ";
+
+    os << *(params->pbufferRowPitch);
+
+    os << ", ";
+    os << ".bufferSlicePitch = ";
+
+    os << *(params->pbufferSlicePitch);
+
+    os << ", ";
+    os << ".hostRowPitch = ";
+
+    os << *(params->phostRowPitch);
+
+    os << ", ";
+    os << ".hostSlicePitch = ";
+
+    os << *(params->phostSlicePitch);
+
+    os << ", ";
+    os << ".pDst = ";
+
+    ur_params::serializePtr(os, *(params->ppDst));
+
+    os << ", ";
+    os << ".numSyncPointsInWaitList = ";
+
+    os << *(params->pnumSyncPointsInWaitList);
+
+    os << ", ";
+    os << ".pSyncPointWaitList = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPointWaitList));
+
+    os << ", ";
+    os << ".pSyncPoint = ";
+
+    ur_params::serializePtr(os, *(params->ppSyncPoint));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_command_buffer_enqueue_exp_params_t *params) {
+
+    os << ".hCommandBuffer = ";
+
+    ur_params::serializePtr(os, *(params->phCommandBuffer));
+
+    os << ", ";
+    os << ".hQueue = ";
+
+    ur_params::serializePtr(os, *(params->phQueue));
+
+    os << ", ";
+    os << ".numEventsInWaitList = ";
+
+    os << *(params->pnumEventsInWaitList);
+
+    os << ", ";
+    os << ".phEventWaitList = {";
+    for (size_t i = 0; *(params->pphEventWaitList) != NULL &&
+                       i < *params->pnumEventsInWaitList;
+         ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+
+        ur_params::serializePtr(os, (*(params->pphEventWaitList))[i]);
+    }
+    os << "}";
+
+    os << ", ";
+    os << ".phEvent = ";
+
+    ur_params::serializePtr(os, *(params->pphEvent));
 
     return os;
 }
@@ -9479,7 +12439,7 @@ operator<<(std::ostream &os,
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           const struct ur_enqueue_usm_fill2_d_params_t *params) {
+           const struct ur_enqueue_usm_fill_2d_params_t *params) {
 
     os << ".hQueue = ";
 
@@ -9543,7 +12503,7 @@ operator<<(std::ostream &os,
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           const struct ur_enqueue_usm_memcpy2_d_params_t *params) {
+           const struct ur_enqueue_usm_memcpy_2d_params_t *params) {
 
     os << ".hQueue = ";
 
@@ -10235,6 +13195,11 @@ operator<<(std::ostream &os,
     os << *(params->pargSize);
 
     os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
+
+    os << ", ";
     os << ".pArgValue = ";
 
     ur_params::serializePtr(os, *(params->ppArgValue));
@@ -10260,6 +13225,11 @@ operator<<(std::ostream &os,
 
     os << *(params->pargSize);
 
+    os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
+
     return os;
 }
 
@@ -10275,6 +13245,11 @@ operator<<(std::ostream &os,
     os << ".argIndex = ";
 
     os << *(params->pargIndex);
+
+    os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
 
     os << ", ";
     os << ".pArgValue = ";
@@ -10303,6 +13278,11 @@ operator<<(std::ostream &os,
     os << *(params->ppropSize);
 
     os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
+
+    os << ", ";
     os << ".pPropValue = ";
     ur_params::serializeTagged(os, *(params->ppPropValue), *(params->ppropName),
                                *(params->ppropSize));
@@ -10324,6 +13304,11 @@ operator<<(std::ostream &os,
     os << *(params->pargIndex);
 
     os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
+
+    os << ", ";
     os << ".hArgValue = ";
 
     ur_params::serializePtr(os, *(params->phArgValue));
@@ -10343,6 +13328,11 @@ operator<<(std::ostream &os,
     os << ".argIndex = ";
 
     os << *(params->pargIndex);
+
+    os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
 
     os << ", ";
     os << ".hArgValue = ";
@@ -10369,6 +13359,86 @@ inline std::ostream &operator<<(
     os << ".pSpecConstants = ";
 
     ur_params::serializePtr(os, *(params->ppSpecConstants));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_loader_config_create_params_t *params) {
+
+    os << ".phLoaderConfig = ";
+
+    ur_params::serializePtr(os, *(params->pphLoaderConfig));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_loader_config_retain_params_t *params) {
+
+    os << ".hLoaderConfig = ";
+
+    ur_params::serializePtr(os, *(params->phLoaderConfig));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_loader_config_release_params_t *params) {
+
+    os << ".hLoaderConfig = ";
+
+    ur_params::serializePtr(os, *(params->phLoaderConfig));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_loader_config_get_info_params_t *params) {
+
+    os << ".hLoaderConfig = ";
+
+    ur_params::serializePtr(os, *(params->phLoaderConfig));
+
+    os << ", ";
+    os << ".propName = ";
+
+    os << *(params->ppropName);
+
+    os << ", ";
+    os << ".propSize = ";
+
+    os << *(params->ppropSize);
+
+    os << ", ";
+    os << ".pPropValue = ";
+    ur_params::serializeTagged(os, *(params->ppPropValue), *(params->ppropName),
+                               *(params->ppropSize));
+
+    os << ", ";
+    os << ".pPropSizeRet = ";
+
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_loader_config_enable_layer_params_t *params) {
+
+    os << ".hLoaderConfig = ";
+
+    ur_params::serializePtr(os, *(params->phLoaderConfig));
+
+    os << ", ";
+    os << ".pLayerName = ";
+
+    ur_params::serializePtr(os, *(params->ppLayerName));
 
     return os;
 }
@@ -10630,9 +13700,79 @@ operator<<(std::ostream &os,
     return os;
 }
 
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_physical_mem_create_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".pProperties = ";
+
+    ur_params::serializePtr(os, *(params->ppProperties));
+
+    os << ", ";
+    os << ".phPhysicalMem = ";
+
+    ur_params::serializePtr(os, *(params->pphPhysicalMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_physical_mem_retain_params_t *params) {
+
+    os << ".hPhysicalMem = ";
+
+    ur_params::serializePtr(os, *(params->phPhysicalMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_physical_mem_release_params_t *params) {
+
+    os << ".hPhysicalMem = ";
+
+    ur_params::serializePtr(os, *(params->phPhysicalMem));
+
+    return os;
+}
+
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_platform_get_params_t *params) {
 
+    os << ".phAdapters = {";
+    for (size_t i = 0;
+         *(params->pphAdapters) != NULL && i < *params->pNumAdapters; ++i) {
+        if (i != 0) {
+            os << ", ";
+        }
+
+        ur_params::serializePtr(os, (*(params->pphAdapters))[i]);
+    }
+    os << "}";
+
+    os << ", ";
+    os << ".NumAdapters = ";
+
+    os << *(params->pNumAdapters);
+
+    os << ", ";
     os << ".NumEntries = ";
 
     os << *(params->pNumEntries);
@@ -10681,9 +13821,9 @@ operator<<(std::ostream &os,
                                *(params->ppropSize));
 
     os << ", ";
-    os << ".pSizeRet = ";
+    os << ".pPropSizeRet = ";
 
-    ur_params::serializePtr(os, *(params->ppSizeRet));
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
 
     return os;
 }
@@ -11574,6 +14714,368 @@ operator<<(std::ostream &os,
     return os;
 }
 
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_usm_pitched_alloc_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".pUSMDesc = ";
+
+    ur_params::serializePtr(os, *(params->ppUSMDesc));
+
+    os << ", ";
+    os << ".pool = ";
+
+    ur_params::serializePtr(os, *(params->ppool));
+
+    os << ", ";
+    os << ".widthInBytes = ";
+
+    os << *(params->pwidthInBytes);
+
+    os << ", ";
+    os << ".height = ";
+
+    os << *(params->pheight);
+
+    os << ", ";
+    os << ".elementSizeBytes = ";
+
+    os << *(params->pelementSizeBytes);
+
+    os << ", ";
+    os << ".ppMem = ";
+
+    ur_params::serializePtr(os, *(params->pppMem));
+
+    os << ", ";
+    os << ".pResultPitch = ";
+
+    ur_params::serializePtr(os, *(params->ppResultPitch));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_usm_import_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pMem = ";
+
+    ur_params::serializePtr(os, *(params->ppMem));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_usm_release_exp_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pMem = ";
+
+    ur_params::serializePtr(os, *(params->ppMem));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_usm_p2p_enable_peer_access_exp_params_t *params) {
+
+    os << ".commandDevice = ";
+
+    ur_params::serializePtr(os, *(params->pcommandDevice));
+
+    os << ", ";
+    os << ".peerDevice = ";
+
+    ur_params::serializePtr(os, *(params->ppeerDevice));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_usm_p2p_disable_peer_access_exp_params_t *params) {
+
+    os << ".commandDevice = ";
+
+    ur_params::serializePtr(os, *(params->pcommandDevice));
+
+    os << ", ";
+    os << ".peerDevice = ";
+
+    ur_params::serializePtr(os, *(params->ppeerDevice));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_usm_p2p_peer_access_get_info_exp_params_t *params) {
+
+    os << ".commandDevice = ";
+
+    ur_params::serializePtr(os, *(params->pcommandDevice));
+
+    os << ", ";
+    os << ".peerDevice = ";
+
+    ur_params::serializePtr(os, *(params->ppeerDevice));
+
+    os << ", ";
+    os << ".propName = ";
+
+    os << *(params->ppropName);
+
+    os << ", ";
+    os << ".propSize = ";
+
+    os << *(params->ppropSize);
+
+    os << ", ";
+    os << ".pPropValue = ";
+    ur_params::serializeTagged(os, *(params->ppPropValue), *(params->ppropName),
+                               *(params->ppropSize));
+
+    os << ", ";
+    os << ".pPropSizeRet = ";
+
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_virtual_mem_granularity_get_info_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".hDevice = ";
+
+    ur_params::serializePtr(os, *(params->phDevice));
+
+    os << ", ";
+    os << ".propName = ";
+
+    os << *(params->ppropName);
+
+    os << ", ";
+    os << ".propSize = ";
+
+    os << *(params->ppropSize);
+
+    os << ", ";
+    os << ".pPropValue = ";
+    ur_params::serializeTagged(os, *(params->ppPropValue), *(params->ppropName),
+                               *(params->ppropSize));
+
+    os << ", ";
+    os << ".pPropSizeRet = ";
+
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_virtual_mem_reserve_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pStart = ";
+
+    ur_params::serializePtr(os, *(params->ppStart));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".ppStart = ";
+
+    ur_params::serializePtr(os, *(params->pppStart));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_virtual_mem_free_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pStart = ";
+
+    ur_params::serializePtr(os, *(params->ppStart));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ur_virtual_mem_map_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pStart = ";
+
+    ur_params::serializePtr(os, *(params->ppStart));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".hPhysicalMem = ";
+
+    ur_params::serializePtr(os, *(params->phPhysicalMem));
+
+    os << ", ";
+    os << ".offset = ";
+
+    os << *(params->poffset);
+
+    os << ", ";
+    os << ".flags = ";
+
+    ur_params::serializeFlag<ur_virtual_mem_access_flag_t>(os,
+                                                           *(params->pflags));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_virtual_mem_unmap_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pStart = ";
+
+    ur_params::serializePtr(os, *(params->ppStart));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_virtual_mem_set_access_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pStart = ";
+
+    ur_params::serializePtr(os, *(params->ppStart));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".flags = ";
+
+    ur_params::serializeFlag<ur_virtual_mem_access_flag_t>(os,
+                                                           *(params->pflags));
+
+    return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ur_virtual_mem_get_info_params_t *params) {
+
+    os << ".hContext = ";
+
+    ur_params::serializePtr(os, *(params->phContext));
+
+    os << ", ";
+    os << ".pStart = ";
+
+    ur_params::serializePtr(os, *(params->ppStart));
+
+    os << ", ";
+    os << ".size = ";
+
+    os << *(params->psize);
+
+    os << ", ";
+    os << ".propName = ";
+
+    os << *(params->ppropName);
+
+    os << ", ";
+    os << ".propSize = ";
+
+    os << *(params->ppropSize);
+
+    os << ", ";
+    os << ".pPropValue = ";
+    ur_params::serializeTagged(os, *(params->ppPropValue), *(params->ppropName),
+                               *(params->ppropSize));
+
+    os << ", ";
+    os << ".pPropSizeRet = ";
+
+    ur_params::serializePtr(os, *(params->ppPropSizeRet));
+
+    return os;
+}
+
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ur_device_get_params_t *params) {
 
@@ -11789,10 +15291,6 @@ operator<<(std::ostream &os,
 }
 
 namespace ur_params {
-// https://devblogs.microsoft.com/oldnewthing/20190710-00/?p=102678
-template <typename, typename = void> constexpr bool is_type_complete_v = false;
-template <typename T>
-constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
 
 template <typename T> inline void serializePtr(std::ostream &os, T *ptr) {
     if (ptr == nullptr) {
@@ -11801,7 +15299,7 @@ template <typename T> inline void serializePtr(std::ostream &os, T *ptr) {
         os << (void *)(ptr) << " (";
         serializePtr(os, *ptr);
         os << ")";
-    } else if constexpr (std::is_void_v<T> || !is_type_complete_v<T>) {
+    } else if constexpr (std::is_void_v<T> || is_handle_v<T *>) {
         os << (void *)ptr;
     } else if constexpr (std::is_same_v<std::remove_cv_t<T>, char>) {
         os << (void *)(ptr) << " (";
@@ -11820,11 +15318,144 @@ inline int serializeFunctionParams(std::ostream &os, uint32_t function,
     case UR_FUNCTION_INIT: {
         os << (const struct ur_init_params_t *)params;
     } break;
-    case UR_FUNCTION_GET_LAST_RESULT: {
-        os << (const struct ur_get_last_result_params_t *)params;
-    } break;
     case UR_FUNCTION_TEAR_DOWN: {
         os << (const struct ur_tear_down_params_t *)params;
+    } break;
+    case UR_FUNCTION_ADAPTER_GET: {
+        os << (const struct ur_adapter_get_params_t *)params;
+    } break;
+    case UR_FUNCTION_ADAPTER_RELEASE: {
+        os << (const struct ur_adapter_release_params_t *)params;
+    } break;
+    case UR_FUNCTION_ADAPTER_RETAIN: {
+        os << (const struct ur_adapter_retain_params_t *)params;
+    } break;
+    case UR_FUNCTION_ADAPTER_GET_LAST_ERROR: {
+        os << (const struct ur_adapter_get_last_error_params_t *)params;
+    } break;
+    case UR_FUNCTION_ADAPTER_GET_INFO: {
+        os << (const struct ur_adapter_get_info_params_t *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_UNSAMPLED_IMAGE_HANDLE_DESTROY_EXP: {
+        os << (const struct
+               ur_bindless_images_unsampled_image_handle_destroy_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_SAMPLED_IMAGE_HANDLE_DESTROY_EXP: {
+        os << (const struct
+               ur_bindless_images_sampled_image_handle_destroy_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_ALLOCATE_EXP: {
+        os << (const struct ur_bindless_images_image_allocate_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_FREE_EXP: {
+        os << (const struct ur_bindless_images_image_free_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_UNSAMPLED_IMAGE_CREATE_EXP: {
+        os << (const struct
+               ur_bindless_images_unsampled_image_create_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_SAMPLED_IMAGE_CREATE_EXP: {
+        os << (const struct ur_bindless_images_sampled_image_create_exp_params_t
+                   *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_COPY_EXP: {
+        os << (const struct ur_bindless_images_image_copy_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_IMAGE_GET_INFO_EXP: {
+        os << (const struct ur_bindless_images_image_get_info_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_MIPMAP_GET_LEVEL_EXP: {
+        os << (const struct ur_bindless_images_mipmap_get_level_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_MIPMAP_FREE_EXP: {
+        os << (const struct ur_bindless_images_mipmap_free_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_IMPORT_OPAQUE_FD_EXP: {
+        os << (const struct ur_bindless_images_import_opaque_fd_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_MAP_EXTERNAL_ARRAY_EXP: {
+        os << (const struct ur_bindless_images_map_external_array_exp_params_t
+                   *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_RELEASE_INTEROP_EXP: {
+        os << (const struct ur_bindless_images_release_interop_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_IMPORT_EXTERNAL_SEMAPHORE_OPAQUE_FD_EXP: {
+        os << (const struct
+               ur_bindless_images_import_external_semaphore_opaque_fd_exp_params_t
+                   *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_DESTROY_EXTERNAL_SEMAPHORE_EXP: {
+        os << (const struct
+               ur_bindless_images_destroy_external_semaphore_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_WAIT_EXTERNAL_SEMAPHORE_EXP: {
+        os << (const struct
+               ur_bindless_images_wait_external_semaphore_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_BINDLESS_IMAGES_SIGNAL_EXTERNAL_SEMAPHORE_EXP: {
+        os << (const struct
+               ur_bindless_images_signal_external_semaphore_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_CREATE_EXP: {
+        os << (const struct ur_command_buffer_create_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_RETAIN_EXP: {
+        os << (const struct ur_command_buffer_retain_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_RELEASE_EXP: {
+        os << (const struct ur_command_buffer_release_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_FINALIZE_EXP: {
+        os << (const struct ur_command_buffer_finalize_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_KERNEL_LAUNCH_EXP: {
+        os << (const struct ur_command_buffer_append_kernel_launch_exp_params_t
+                   *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMCPY_USM_EXP: {
+        os << (const struct ur_command_buffer_append_memcpy_usm_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_COPY_EXP: {
+        os << (const struct ur_command_buffer_append_membuffer_copy_exp_params_t
+                   *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_WRITE_EXP: {
+        os << (const struct
+               ur_command_buffer_append_membuffer_write_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_READ_EXP: {
+        os << (const struct ur_command_buffer_append_membuffer_read_exp_params_t
+                   *)params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_COPY_RECT_EXP: {
+        os << (const struct
+               ur_command_buffer_append_membuffer_copy_rect_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_WRITE_RECT_EXP: {
+        os << (const struct
+               ur_command_buffer_append_membuffer_write_rect_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_APPEND_MEMBUFFER_READ_RECT_EXP: {
+        os << (const struct
+               ur_command_buffer_append_membuffer_read_rect_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_COMMAND_BUFFER_ENQUEUE_EXP: {
+        os << (const struct ur_command_buffer_enqueue_exp_params_t *)params;
     } break;
     case UR_FUNCTION_CONTEXT_CREATE: {
         os << (const struct ur_context_create_params_t *)params;
@@ -11906,11 +15537,11 @@ inline int serializeFunctionParams(std::ostream &os, uint32_t function,
     case UR_FUNCTION_ENQUEUE_USM_ADVISE: {
         os << (const struct ur_enqueue_usm_advise_params_t *)params;
     } break;
-    case UR_FUNCTION_ENQUEUE_USM_FILL2_D: {
-        os << (const struct ur_enqueue_usm_fill2_d_params_t *)params;
+    case UR_FUNCTION_ENQUEUE_USM_FILL_2D: {
+        os << (const struct ur_enqueue_usm_fill_2d_params_t *)params;
     } break;
-    case UR_FUNCTION_ENQUEUE_USM_MEMCPY2_D: {
-        os << (const struct ur_enqueue_usm_memcpy2_d_params_t *)params;
+    case UR_FUNCTION_ENQUEUE_USM_MEMCPY_2D: {
+        os << (const struct ur_enqueue_usm_memcpy_2d_params_t *)params;
     } break;
     case UR_FUNCTION_ENQUEUE_DEVICE_GLOBAL_VARIABLE_WRITE: {
         os << (const struct ur_enqueue_device_global_variable_write_params_t *)
@@ -11998,6 +15629,21 @@ inline int serializeFunctionParams(std::ostream &os, uint32_t function,
         os << (const struct ur_kernel_set_specialization_constants_params_t *)
                 params;
     } break;
+    case UR_FUNCTION_LOADER_CONFIG_CREATE: {
+        os << (const struct ur_loader_config_create_params_t *)params;
+    } break;
+    case UR_FUNCTION_LOADER_CONFIG_RETAIN: {
+        os << (const struct ur_loader_config_retain_params_t *)params;
+    } break;
+    case UR_FUNCTION_LOADER_CONFIG_RELEASE: {
+        os << (const struct ur_loader_config_release_params_t *)params;
+    } break;
+    case UR_FUNCTION_LOADER_CONFIG_GET_INFO: {
+        os << (const struct ur_loader_config_get_info_params_t *)params;
+    } break;
+    case UR_FUNCTION_LOADER_CONFIG_ENABLE_LAYER: {
+        os << (const struct ur_loader_config_enable_layer_params_t *)params;
+    } break;
     case UR_FUNCTION_MEM_IMAGE_CREATE: {
         os << (const struct ur_mem_image_create_params_t *)params;
     } break;
@@ -12029,6 +15675,15 @@ inline int serializeFunctionParams(std::ostream &os, uint32_t function,
     } break;
     case UR_FUNCTION_MEM_IMAGE_GET_INFO: {
         os << (const struct ur_mem_image_get_info_params_t *)params;
+    } break;
+    case UR_FUNCTION_PHYSICAL_MEM_CREATE: {
+        os << (const struct ur_physical_mem_create_params_t *)params;
+    } break;
+    case UR_FUNCTION_PHYSICAL_MEM_RETAIN: {
+        os << (const struct ur_physical_mem_retain_params_t *)params;
+    } break;
+    case UR_FUNCTION_PHYSICAL_MEM_RELEASE: {
+        os << (const struct ur_physical_mem_release_params_t *)params;
     } break;
     case UR_FUNCTION_PLATFORM_GET: {
         os << (const struct ur_platform_get_params_t *)params;
@@ -12160,6 +15815,48 @@ inline int serializeFunctionParams(std::ostream &os, uint32_t function,
     } break;
     case UR_FUNCTION_USM_POOL_GET_INFO: {
         os << (const struct ur_usm_pool_get_info_params_t *)params;
+    } break;
+    case UR_FUNCTION_USM_PITCHED_ALLOC_EXP: {
+        os << (const struct ur_usm_pitched_alloc_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_USM_IMPORT_EXP: {
+        os << (const struct ur_usm_import_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_USM_RELEASE_EXP: {
+        os << (const struct ur_usm_release_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_USM_P2P_ENABLE_PEER_ACCESS_EXP: {
+        os << (const struct ur_usm_p2p_enable_peer_access_exp_params_t *)params;
+    } break;
+    case UR_FUNCTION_USM_P2P_DISABLE_PEER_ACCESS_EXP: {
+        os << (const struct ur_usm_p2p_disable_peer_access_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_USM_P2P_PEER_ACCESS_GET_INFO_EXP: {
+        os << (const struct ur_usm_p2p_peer_access_get_info_exp_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_GRANULARITY_GET_INFO: {
+        os << (const struct ur_virtual_mem_granularity_get_info_params_t *)
+                params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_RESERVE: {
+        os << (const struct ur_virtual_mem_reserve_params_t *)params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_FREE: {
+        os << (const struct ur_virtual_mem_free_params_t *)params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_MAP: {
+        os << (const struct ur_virtual_mem_map_params_t *)params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_UNMAP: {
+        os << (const struct ur_virtual_mem_unmap_params_t *)params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_SET_ACCESS: {
+        os << (const struct ur_virtual_mem_set_access_params_t *)params;
+    } break;
+    case UR_FUNCTION_VIRTUAL_MEM_GET_INFO: {
+        os << (const struct ur_virtual_mem_get_info_params_t *)params;
     } break;
     case UR_FUNCTION_DEVICE_GET: {
         os << (const struct ur_device_get_params_t *)params;

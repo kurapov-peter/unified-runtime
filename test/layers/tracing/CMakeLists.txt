@@ -1,5 +1,7 @@
 # Copyright (C) 2023 Intel Corporation
-# SPDX-License-Identifier: MIT
+# Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+# See LICENSE.TXT
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 set(TEST_NAME example-collected-hello-world)
 
@@ -20,4 +22,5 @@ set_property(TEST ${TEST_NAME} PROPERTY ENVIRONMENT
     "XPTI_TRACE_ENABLE=1"
     "XPTI_FRAMEWORK_DISPATCHER=$<TARGET_FILE:xptifw>"
     "XPTI_SUBSCRIBERS=$<TARGET_FILE:collector>"
-    "UR_ADAPTERS_FORCE_LOAD=\"$<TARGET_FILE:ur_adapter_null>\"")
+    "UR_ADAPTERS_FORCE_LOAD=\"$<TARGET_FILE:ur_adapter_null>\""
+    "UR_ENABLE_LAYERS=UR_LAYER_TRACING")

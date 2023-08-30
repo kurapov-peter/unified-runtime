@@ -1,4 +1,4 @@
-﻿
+
 <%
     OneApi=tags['$OneApi']
     x=tags['$x']
@@ -41,30 +41,6 @@ In particular, the following words are used to describe the actions of an implem
   - **Should** - the word *should*, or the adjective *recommended*, mean that there could be reasons for an implementation to deviate from the behavior described, but that such deviation should be avoided.
   - **Must** - the word *must*, or the term *required* or *shall*, mean that the behavior described is an absolute requirement of the specification.
 
-Naming Convention
------------------
-
-The following naming conventions must be followed:
-
-## --validate=off
-  - All functions must be prefixed with `${x}`
-  - All functions must use camel case `${x}ObjectAction` convention
-  - All macros must use all caps `${X}_NAME` convention
-  - All structures, enumerations and other types must follow `${x}_name_t` snake case convention
-  - All structure members and function parameters must use camel case convention
-  - All enumerator values must use all caps `${X}_ENUM_ETOR_NAME` convention
-  - All handle types must end with `handle_t`
-  - All descriptor structures must end with `desc_t`
-  - All property structures must end with `properties_t`
-  - All flag enumerations must end with `flags_t`
-## --validate=on
-
-The following coding conventions must be followed:
-
-  - All descriptor structures must be derived from `${x}_base_desc_t`
-  - All property structures must be derived from `${x}_base_properties_t`
-  - All function input parameters must precede output parameters
-  - All functions must return ${x}_result_t
 
 Versioning
 ----------
@@ -107,7 +83,7 @@ The following design philosophies are adopted to reduce Host-side overhead:
 
   - All API functions return ${x}_result_t
 
-    + This enumeration contains error codes for the Level Zero APIs and validation layers
+    + This enumeration contains error codes for the Unified Runtime APIs and validation layers
     + This allows for a consistent pattern on the application side for catching errors; especially when validation layer(s) are enabled
 
 Multithreading and Concurrency
@@ -234,6 +210,49 @@ An example of an environment variable for setting up the null adapter library wi
 
   UR_LOG_NULL="level:warning;output:stdout"
 
+Adapter Discovery
+---------------------
+UR is capable of discovering adapter libraries in the following ways in the listed order:
+
+  - Search in paths to the adapters set in `UR_ADAPTERS_FORCE_LOAD` environment variable.
+
+    + All other adapter discovery methods are disabled when this environment variable is used.
+
+  - Search in directories specified in `UR_ADAPTERS_SEARCH_PATH` environment variable.
+
+  - Leave adapter discovery for the OS.
+
+    + This method is disabled on Windows.
+
+    + If on Linux, use the shared library discovery mechanism (see **ld.so**(8) for details).
+
+  - Search in directory at the UR loader location.
+
+Currently, UR looks for these adapter libraries:
+
+  - ur_adapter_level_zero
+
+For more information about the usage of mentioned environment variables see `Environment Variables`_ section.
+
+Layers
+---------------------
+UR comes with a mechanism that allows various API intercept layers to be enabled, either through the API or with an environment variable (see `Environment Variables`_).
+Layers currently included with the runtime are as follows:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Layer Name
+     - Description
+   * - UR_LAYER_PARAMETER_VALIDATION
+     - Enables non-adapter-specific parameter validation (e.g. checking for null values).
+   * - UR_LAYER_LEAK_CHECKING
+     - Performs some leak checking for API calls involving object creation/destruction.
+   * - UR_LAYER_FULL_VALIDATION
+     - Enables UR_LAYER_PARAMETER_VALIDATION and UR_LAYER_LEAK_CHECKING.
+   * - UR_LAYER_TRACING
+     - Enables the XPTI tracing layer, see Tracing_ for more detail.
+
 Environment Variables
 ---------------------
 
@@ -253,7 +272,7 @@ Specific environment variables can be set to control the behavior of unified run
 
 .. envvar:: UR_ADAPTERS_FORCE_LOAD
 
-   Holds a comma-separated list of library names used by the loader for adapter discovery. By setting this value you can
+   Holds a comma-separated list of library paths used by the loader for adapter discovery. By setting this value you can
    force the loader to use specific adapter implementations from the libraries provided.
 
    .. note::
@@ -262,8 +281,7 @@ Specific environment variables can be set to control the behavior of unified run
 
    .. note::
 
-    When this environmental variable is used the paths in environmental variable :envvar:`UR_ADAPTERS_SEARCH_PATH`
-    are ignored.
+    All other adapter discovery methods are disabled when this environment variable is used.
 
 .. envvar:: UR_ADAPTERS_SEARCH_PATH
 
@@ -276,29 +294,20 @@ Specific environment variables can be set to control the behavior of unified run
 
    .. note::
 
-    This environmental variable is ignored when :envvar:`UR_ADAPTERS_FORCE_LOAD` environmental variable is used.
+    This environment variable is ignored when :envvar:`UR_ADAPTERS_FORCE_LOAD` environment variable is used.
 
-.. envvar:: UR_ENABLE_VALIDATION_LAYER
+.. envvar:: UR_ENABLE_LAYERS
 
-   Holds the value ``0`` or ``1``. By setting it to ``1`` you enable validation layer.
+    Holds a comma-separated list of layers to enable in addition to any specified via ``urInit``.
 
-   .. note::
+    .. note::
 
-    This environment variable should be used for development and debugging only.
+    See the Layers_ section for details of the layers currently included in the runtime.
 
-.. envvar:: UR_ENABLE_PARAMETER_VALIDATION
+Service identifiers
+---------------------
 
-   Holds the value ``0`` or ``1``. By setting it to ``1`` you enable parameter validation for Unified Runtime API calls.
-
-   .. note::
-
-    This environment variable should be used together with :envvar:`UR_ENABLE_VALIDATION_LAYER`.
-
-.. envvar:: UR_ENABLE_LEAK_CHECKING
-
-   Holds the value ``0`` or ``1``. By setting it to ``1`` you enable leak checking for Unified Runtime API calls involving
-   object creation/destruction. Leak checking depends on the logging mechanism.
-
-   .. note::
-
-    This environment variable should be used together with :envvar:`UR_ENABLE_VALIDATION_LAYER` and :envvar:`UR_LOG_VALIDATION`.
+Unified Runtime may create logs containing Personally Identifiable Information (PII)
+in the form of unique device identifiers during its use.
+This capability is turned off by default.
+Please refer to the Logging_ and `Environment Variables`_ sections above for more information.

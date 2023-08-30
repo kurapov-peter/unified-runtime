@@ -1,5 +1,7 @@
 # Copyright (C) 2022-2023 Intel Corporation
-# SPDX-License-Identifier: MIT
+# Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+# See LICENSE.TXT
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 include(FetchContent)
 FetchContent_Declare(
@@ -15,10 +17,13 @@ enable_testing()
 add_subdirectory(python)
 add_subdirectory(loader)
 add_subdirectory(conformance)
-add_subdirectory(unified_memory_allocation)
+add_subdirectory(unified_malloc_framework)
 add_subdirectory(usm)
 add_subdirectory(layers)
 add_subdirectory(unit)
 if(UR_BUILD_TOOLS)
   add_subdirectory(tools)
+endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND DEFINED UR_DPCXX)
+    add_subdirectory(fuzz)
 endif()

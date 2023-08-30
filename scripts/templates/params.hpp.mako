@@ -11,7 +11,9 @@ from templates import helper as th
  *
  * Copyright (C) 2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file ${name}.hpp
  *
@@ -39,6 +41,16 @@ from templates import helper as th
     %endif
 </%def>
 
+<%
+def findUnionTag(_union):
+    tag = [_obj for _s in specs for _obj in _s['objects'] if _obj['name'] == _union['tag']]
+    return tag[0] if len(tag) > 0 else None
+
+def findMemberType(_item):
+    query = [_o for _s in specs for _o in _s['objects'] if _o['name'] == _item['type']]
+    return query[0] if len(query) > 0 else None
+%>
+
 <%def name="line(item, n, params, params_dict)">
     <%
         iname = th._get_param_name(n, tags, item)
@@ -55,7 +67,7 @@ from templates import helper as th
     %if n != 0:
         os << ", ";
     %endif
-    ## can't iterate over 'void *'...
+## can't iterate over 'void *'...
     %if th.param_traits.is_range(item) and "void*" not in itype:
         os << ".${iname} = {";
         for (size_t i = ${th.param_traits.range_start(item)}; ${deref}(params${access}${pname}) != NULL && i < ${deref}params${access}${prefix + th.param_traits.range_end(item)}; ++i) {
@@ -67,6 +79,9 @@ from templates import helper as th
             </%call>
         }
         os << "}";
+    %elif findMemberType(item) is not None and findMemberType(item)['type'] == "union":
+        os << ".${iname} = ";
+        ${x}_params::serializeUnion(os, ${deref}(params${access}${item['name']}), params${access}${th.param_traits.tagged_member(item)});
     %elif typename is not None:
         os << ".${iname} = ";
         ${x}_params::serializeTagged(os, ${deref}(params${access}${pname}), ${deref}(params${access}${prefix}${typename}), ${deref}(params${access}${prefix}${typename_size}));
@@ -79,6 +94,16 @@ from templates import helper as th
 </%def>
 
 namespace ${x}_params {
+template <typename T> struct is_handle : std::false_type {};
+%for spec in specs:
+%for obj in spec['objects']:
+%if re.match(r"handle", obj['type']):
+template <> struct is_handle<${th.make_type_name(n, tags, obj)}> : std::true_type {};
+%endif
+%endfor
+%endfor
+template <typename T>
+inline constexpr bool is_handle_v = is_handle<T>::value;
 template <typename T> inline void serializePtr(std::ostream &os, T *ptr);
 template <typename T> inline void serializeFlag(std::ostream &os, uint32_t flag);
 template <typename T> inline void serializeTagged(std::ostream &os, const void *ptr, T value, size_t size);
@@ -94,6 +119,15 @@ template <typename T> inline void serializeTagged(std::ostream &os, const void *
     %endif
 %endif
 
+%if re.match(r"union", obj['type']) and obj['name']:
+    <% tag = [_obj for _s in specs for _obj in _s['objects'] if _obj['name'] == obj['tag']][0] %>
+    inline void serializeUnion(
+        std::ostream &os,
+        const ${obj['type']} ${th.make_type_name(n, tags, obj)} params,
+        const ${tag['type']} ${th.make_type_name(n, tags, tag)} tag
+    );
+%endif
+
 
 %if th.type_traits.is_flags(obj['name']):
     template<> inline void serializeFlag<${th.make_enum_name(n, tags, obj)}>(std::ostream &os, uint32_t flag);
@@ -107,7 +141,7 @@ template <typename T> inline void serializeTagged(std::ostream &os, const void *
 ## ENUM #######################################################################
 %if re.match(r"enum", obj['type']):
     inline std::ostream &operator<<(std::ostream &os, enum ${th.make_enum_name(n, tags, obj)} value);
-%elif re.match(r"struct|union", obj['type']):
+%elif re.match(r"struct", obj['type']):
     inline std::ostream &operator<<(std::ostream &os, const ${obj['type']} ${th.make_type_name(n, tags, obj)} params);
 %endif
 %endfor # obj in spec['objects']
@@ -258,7 +292,7 @@ inline void serializeFlag<${th.make_enum_name(n, tags, obj)}>(std::ostream &os, 
 } // namespace ${x}_params
 %endif
 ## STRUCT/UNION ###############################################################
-%elif re.match(r"struct|union", obj['type']):
+%elif re.match(r"struct", obj['type']):
 inline std::ostream &operator<<(std::ostream &os, const ${obj['type']} ${th.make_type_name(n, tags, obj)} params) {
     os << "(${obj['type']} ${th.make_type_name(n, tags, obj)}){";
     <%
@@ -274,6 +308,33 @@ inline std::ostream &operator<<(std::ostream &os, const ${obj['type']} ${th.make
     %endfor
     os << "}";
     return os;
+}
+%elif re.match(r"union", obj['type']) and obj['name']:
+<% tag = findUnionTag(obj) %>
+inline void ${x}_params::serializeUnion(
+    std::ostream &os,
+    const ${obj['type']} ${th.make_type_name(n, tags, obj)} params,
+    const ${tag['type']} ${th.make_type_name(n, tags, tag)} tag
+){
+    os << "(${obj['type']} ${th.make_type_name(n, tags, obj)}){";
+<%
+params_dict = dict()
+for item in obj['members']:
+    iname = th._get_param_name(n, tags, item)
+    itype = th._get_type_name(n, tags, obj, item)
+    params_dict[iname] = itype
+%>
+    switch(tag){
+%for mem in obj['members']:
+    case ${th.subt(n, tags, mem['tag'])}:
+        ${line(mem, 0, False, params_dict)}
+        break;
+%endfor
+    default:
+        os << "<unknown>";
+        break;
+    }
+    os << "}";
 }
 %endif
 %endfor # obj in spec['objects']
@@ -300,12 +361,6 @@ inline std::ostream &operator<<(std::ostream &os, const struct ${th.make_pfncb_p
 %endfor
 
 namespace ${x}_params {
-## This is needed to avoid dereferencing forward declared handles
-// https://devblogs.microsoft.com/oldnewthing/20190710-00/?p=102678
-template<typename, typename = void>
-constexpr bool is_type_complete_v = false;
-template<typename T>
-constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
 
 template <typename T> inline void serializePtr(std::ostream &os, T *ptr) {
     if (ptr == nullptr) {
@@ -314,7 +369,7 @@ template <typename T> inline void serializePtr(std::ostream &os, T *ptr) {
         os << (void *)(ptr) << " (";
         serializePtr(os, *ptr);
         os << ")";
-    } else if constexpr (std::is_void_v<T> || !is_type_complete_v<T>) {
+    } else if constexpr (std::is_void_v<T> || is_handle_v<T *>) {
         os << (void *)ptr;
     } else if constexpr (std::is_same_v<std::remove_cv_t< T >, char>) {
         os << (void *)(ptr) << " (";

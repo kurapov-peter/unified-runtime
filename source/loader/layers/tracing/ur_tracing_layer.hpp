@@ -2,7 +2,9 @@
  *
  * Copyright (C) 2023 Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file ur_tracing_layer.h
  *
@@ -26,8 +28,11 @@ class __urdlllocal context_t : public proxy_layer_context_t {
     context_t();
     ~context_t();
 
-    bool isEnabled() override;
-    ur_result_t init(ur_dditable_t *dditable) override;
+    bool isAvailable() const override;
+
+    std::vector<std::string> getNames() const override { return {name}; }
+    ur_result_t init(ur_dditable_t *dditable,
+                     const std::set<std::string> &enabledLayerNames) override;
     uint64_t notify_begin(uint32_t id, const char *name, void *args);
     void notify_end(uint32_t id, const char *name, void *args,
                     ur_result_t *resultp, uint64_t instance);
@@ -36,6 +41,8 @@ class __urdlllocal context_t : public proxy_layer_context_t {
     void notify(uint16_t trace_type, uint32_t id, const char *name, void *args,
                 ur_result_t *resultp, uint64_t instance);
     uint8_t call_stream_id;
+
+    const std::string name = "UR_LAYER_TRACING";
 };
 
 extern context_t context;

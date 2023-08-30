@@ -1,8 +1,10 @@
 // Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include "../unified_memory_allocation/common/pool.hpp"
-#include "../unified_memory_allocation/common/provider.hpp"
+#include "../unified_malloc_framework/common/pool.hpp"
+#include "../unified_malloc_framework/common/provider.hpp"
 #include "ur_pool_manager.hpp"
 
 #include <uur/fixtures.h>

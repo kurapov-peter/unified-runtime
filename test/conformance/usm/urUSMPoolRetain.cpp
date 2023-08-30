@@ -1,5 +1,7 @@
 // Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include "ur_api.h"
 #include <uur/fixtures.h>
@@ -23,7 +25,7 @@ TEST_P(urUSMPoolRetainTest, Success) {
     uint32_t afterRefCount = 0;
     ASSERT_SUCCESS(uur::GetObjectReferenceCount(pool, afterRefCount));
 
-    ASSERT_LT(afterRefCount, prevRefCount);
+    ASSERT_LT(afterRefCount, refCount);
 }
 
 TEST_P(urUSMPoolRetainTest, InvalidNullHandlePool) {

@@ -3,11 +3,7 @@
 # See LICENSE.TXT
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-set(SYCL_L0_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
-set(L0_DIR "${SYCL_L0_DIR}/sycl/plugins/unified_runtime/ur/adapters/level_zero")
-
-# fetch xpti proxy library for the tracing layer
-FetchSource(https://github.com/intel/llvm.git sycl-nightly/20230601 "sycl/plugins/unified_runtime/ur" ${SYCL_L0_DIR})
+set(L0_DIR "${SYCL_ADAPTER_DIR}/sycl/plugins/unified_runtime/ur/adapters/level_zero")
 
 set(TARGET_NAME ur_adapter_level_zero)
 
@@ -15,7 +11,7 @@ if (NOT DEFINED LEVEL_ZERO_LIBRARY OR NOT DEFINED LEVEL_ZERO_INCLUDE_DIR)
     message(STATUS "Download Level Zero loader and headers from github.com")
 
     set(LEVEL_ZERO_LOADER_REPO "https://github.com/oneapi-src/level-zero.git")
-    set(LEVEL_ZERO_LOADER_TAG v1.8.8)
+    set(LEVEL_ZERO_LOADER_TAG v1.11.0)
 
     # Disable due to a bug https://github.com/oneapi-src/level-zero/issues/104
     set(CMAKE_INCLUDE_CURRENT_DIR OFF)
@@ -75,37 +71,38 @@ target_include_directories(LevelZeroLoader-Headers
     INTERFACE "${LEVEL_ZERO_INCLUDE_DIR}"
 )
 
-add_library(${TARGET_NAME}
+add_ur_adapter(${TARGET_NAME}
     SHARED
-    ${L0_DIR}/ur_loader_interface.cpp
-    ${L0_DIR}/ur_level_zero_common.hpp
-    ${L0_DIR}/ur_level_zero_context.hpp
-    ${L0_DIR}/ur_level_zero_device.hpp
-    ${L0_DIR}/ur_level_zero_event.hpp
-    ${L0_DIR}/ur_level_zero_usm.hpp
-    ${L0_DIR}/ur_level_zero_mem.hpp
-    ${L0_DIR}/ur_level_zero_kernel.hpp
-    ${L0_DIR}/ur_level_zero_platform.hpp
-    ${L0_DIR}/ur_level_zero_program.hpp
-    ${L0_DIR}/ur_level_zero_queue.hpp
-    ${L0_DIR}/ur_level_zero_sampler.hpp
+    ${L0_DIR}/ur_interface_loader.cpp
+    ${L0_DIR}/adapter.hpp
+    ${L0_DIR}/adapter.cpp
+    ${L0_DIR}/command_buffer.hpp
+    ${L0_DIR}/command_buffer.cpp
+    ${L0_DIR}/common.hpp
+    ${L0_DIR}/context.hpp
+    ${L0_DIR}/device.hpp
+    ${L0_DIR}/event.hpp
+    ${L0_DIR}/usm.hpp
+    ${L0_DIR}/memory.hpp
+    ${L0_DIR}/kernel.hpp
+    ${L0_DIR}/platform.hpp
+    ${L0_DIR}/program.hpp
+    ${L0_DIR}/queue.hpp
+    ${L0_DIR}/sampler.hpp
     ${L0_DIR}/ur_level_zero.cpp
-    ${L0_DIR}/ur_level_zero_common.cpp
-    ${L0_DIR}/ur_level_zero_context.cpp
-    ${L0_DIR}/ur_level_zero_device.cpp
-    ${L0_DIR}/ur_level_zero_event.cpp
-    ${L0_DIR}/ur_level_zero_usm.cpp
-    ${L0_DIR}/ur_level_zero_mem.cpp
-    ${L0_DIR}/ur_level_zero_kernel.cpp
-    ${L0_DIR}/ur_level_zero_platform.cpp
-    ${L0_DIR}/ur_level_zero_program.cpp
-    ${L0_DIR}/ur_level_zero_queue.cpp
-    ${L0_DIR}/ur_level_zero_sampler.cpp
+    ${L0_DIR}/common.cpp
+    ${L0_DIR}/context.cpp
+    ${L0_DIR}/device.cpp
+    ${L0_DIR}/event.cpp
+    ${L0_DIR}/usm.cpp
+    ${L0_DIR}/usm_p2p.cpp
+    ${L0_DIR}/memory.cpp
+    ${L0_DIR}/kernel.cpp
+    ${L0_DIR}/platform.cpp
+    ${L0_DIR}/program.cpp
+    ${L0_DIR}/queue.cpp
+    ${L0_DIR}/sampler.cpp
     ${L0_DIR}/../../ur.cpp
-    ${L0_DIR}/../../usm_allocator.cpp
-    ${L0_DIR}/../../usm_allocator.hpp
-    ${L0_DIR}/../../usm_allocator_config.cpp
-    ${L0_DIR}/../../usm_allocator_config.hpp
 )
 
 set_target_properties(${TARGET_NAME} PROPERTIES
@@ -116,6 +113,7 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 target_link_libraries(${TARGET_NAME} PRIVATE
     ${PROJECT_NAME}::headers
     ${PROJECT_NAME}::common
+    ${PROJECT_NAME}::unified_malloc_framework
     LevelZeroLoader
     LevelZeroLoader-Headers
 )
@@ -124,9 +122,3 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${L0_DIR}/../../../
     LevelZeroLoader-Headers
 )
-
-if(UNIX)
-    set(GCC_COVERAGE_COMPILE_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden -fno-strict-aliasing")
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
-endif()
-

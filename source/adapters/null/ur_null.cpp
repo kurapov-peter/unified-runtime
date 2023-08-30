@@ -2,7 +2,9 @@
  *
  * Copyright (C) 2019-2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file ur_null.cpp
  *
@@ -16,7 +18,28 @@ context_t d_context;
 //////////////////////////////////////////////////////////////////////////
 context_t::context_t() {
     //////////////////////////////////////////////////////////////////////////
-    urDdiTable.Platform.pfnGet = [](uint32_t NumEntries,
+    urDdiTable.Global.pfnAdapterGet = [](uint32_t NumAdapters,
+                                         ur_adapter_handle_t *phAdapters,
+                                         uint32_t *pNumAdapters) {
+        if (phAdapters != nullptr && NumAdapters != 1) {
+            return UR_RESULT_ERROR_INVALID_SIZE;
+        }
+        if (pNumAdapters != nullptr) {
+            *pNumAdapters = 1;
+        }
+        if (nullptr != phAdapters) {
+            *reinterpret_cast<void **>(phAdapters) = d_context.get();
+        }
+
+        return UR_RESULT_SUCCESS;
+    };
+    //////////////////////////////////////////////////////////////////////////
+    urDdiTable.Global.pfnAdapterRelease = [](ur_adapter_handle_t) {
+        return UR_RESULT_SUCCESS;
+    };
+    //////////////////////////////////////////////////////////////////////////
+    urDdiTable.Platform.pfnGet = [](ur_adapter_handle_t *phAdapters,
+                                    uint32_t NumAdapters, uint32_t NumEntries,
                                     ur_platform_handle_t *phPlatforms,
                                     uint32_t *pNumPlatforms) {
         if (phPlatforms != nullptr && NumEntries != 1) {
@@ -137,6 +160,69 @@ context_t::context_t() {
 
             default:
                 return UR_RESULT_ERROR_INVALID_ARGUMENT;
+            }
+            return UR_RESULT_SUCCESS;
+        };
+
+    //////////////////////////////////////////////////////////////////////////
+    urDdiTable.USM.pfnHostAlloc =
+        [](ur_context_handle_t hContext, const ur_usm_desc_t *pUSMDesc,
+           ur_usm_pool_handle_t pool, size_t size, void **ppMem) {
+            if (size == 0) {
+                *ppMem = nullptr;
+                return UR_RESULT_ERROR_UNSUPPORTED_SIZE;
+            }
+            *ppMem = malloc(size);
+            if (ppMem == nullptr) {
+                return UR_RESULT_ERROR_OUT_OF_HOST_MEMORY;
+            }
+            return UR_RESULT_SUCCESS;
+        };
+
+    //////////////////////////////////////////////////////////////////////////
+    urDdiTable.USM.pfnDeviceAlloc =
+        [](ur_context_handle_t hContext, ur_device_handle_t hDevice,
+           const ur_usm_desc_t *pUSMDesc, ur_usm_pool_handle_t pool,
+           size_t size, void **ppMem) {
+            if (size == 0) {
+                *ppMem = nullptr;
+                return UR_RESULT_ERROR_UNSUPPORTED_SIZE;
+            }
+            *ppMem = malloc(size);
+            if (ppMem == nullptr) {
+                return UR_RESULT_ERROR_OUT_OF_HOST_MEMORY;
+            }
+            return UR_RESULT_SUCCESS;
+        };
+
+    //////////////////////////////////////////////////////////////////////////
+    urDdiTable.USM.pfnFree = [](ur_context_handle_t hContext, void *pMem) {
+        free(pMem);
+        return UR_RESULT_SUCCESS;
+    };
+
+    //////////////////////////////////////////////////////////////////////////
+    urDdiTable.USM.pfnGetMemAllocInfo =
+        [](ur_context_handle_t hContext, const void *pMem,
+           ur_usm_alloc_info_t propName, size_t propSize, void *pPropValue,
+           size_t *pPropSizeRet) {
+            switch (propName) {
+            case UR_USM_ALLOC_INFO_TYPE:
+                *reinterpret_cast<ur_usm_type_t *>(pPropValue) =
+                    pMem ? UR_USM_TYPE_DEVICE : UR_USM_TYPE_UNKNOWN;
+                if (pPropSizeRet != nullptr) {
+                    *pPropSizeRet = sizeof(ur_usm_type_t);
+                }
+                break;
+            case UR_USM_ALLOC_INFO_SIZE:
+                *reinterpret_cast<size_t *>(pPropValue) = pMem ? SIZE_MAX : 0;
+                if (pPropSizeRet != nullptr) {
+                    *pPropSizeRet = sizeof(size_t);
+                }
+                break;
+            default:
+                pPropValue = nullptr;
+                break;
             }
             return UR_RESULT_SUCCESS;
         };

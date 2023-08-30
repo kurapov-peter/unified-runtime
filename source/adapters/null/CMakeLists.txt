@@ -1,9 +1,11 @@
 # Copyright (C) 2022 Intel Corporation
-# SPDX-License-Identifier: MIT
+# Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+# See LICENSE.TXT
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 set(TARGET_NAME ur_adapter_null)
 
-add_library(${TARGET_NAME}
+add_ur_adapter(${TARGET_NAME}
     SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/ur_null.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ur_null.cpp
@@ -19,8 +21,3 @@ target_link_libraries(${TARGET_NAME} PRIVATE
     ${PROJECT_NAME}::headers
     ${PROJECT_NAME}::common
 )
-
-if(UNIX)
-    set(GCC_COVERAGE_COMPILE_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden -fno-strict-aliasing")
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
-endif()

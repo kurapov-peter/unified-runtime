@@ -1,13 +1,15 @@
 #
 # Copyright (C) 2023 Intel Corporation
 #
-# SPDX-License-Identifier: MIT
+# Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+# See LICENSE.TXT
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # See YaML.md for syntax definition
 #
 --- #--------------------------------------------------------------------------
 type: header
-desc: "Intel $OneApi Level-Zero Runtime APIs for Program"
+desc: "Intel $OneApi Unified Runtime Runtime APIs for Program"
 ordinal: "6"
 --- #--------------------------------------------------------------------------
 type: enum
@@ -27,26 +29,31 @@ type: union
 desc: "Program metadata value union."
 class: $xProgram
 name: $x_program_metadata_value_t
+tag: $x_program_metadata_type_t
 members:
     - type: uint32_t
       name: data32
       desc: "[in] inline storage for the 32-bit data, type $X_PROGRAM_METADATA_TYPE_UINT32."
+      tag: $X_PROGRAM_METADATA_TYPE_UINT32
     - type: uint64_t
       name: data64
       desc: "[in] inline storage for the 64-bit data, type $X_PROGRAM_METADATA_TYPE_UINT64."
+      tag: $X_PROGRAM_METADATA_TYPE_UINT64
     - type: char*
       name: pString
       desc: "[in] pointer to null-terminated string data, type $X_PROGRAM_METADATA_TYPE_STRING."
+      tag: $X_PROGRAM_METADATA_TYPE_STRING
     - type: void*
       name: pData
       desc: "[in] pointer to binary data, type $X_PROGRAM_METADATA_TYPE_BYTE_ARRAY."
+      tag: $X_PROGRAM_METADATA_TYPE_BYTE_ARRAY
 --- #--------------------------------------------------------------------------
 type: struct
 desc: "Program metadata property."
 class: $xProgram
 name: $x_program_metadata_t
 members:
-    - type: char*
+    - type: const char*
       name: pName
       desc: "[in] null-terminated metadata name."
     - type: $x_program_metadata_type_t
@@ -57,7 +64,7 @@ members:
       desc: "[in] size in bytes of the data pointed to by value.pData, or 0 when value size is less than 64-bits and is stored directly in value.data."
     - type: $x_program_metadata_value_t
       name: value
-      desc: "[in] the metadata value storage."
+      desc: "[in][tagged_by(type)] the metadata value storage."
 --- #--------------------------------------------------------------------------
 type: struct
 desc: "Program creation properties."
@@ -107,6 +114,8 @@ returns:
         - "If `pIL` is not a valid IL binary for devices in `hContext`."
     - $X_RESULT_ERROR_COMPILER_NOT_AVAILABLE:
         - "If devices in `hContext` don't have the capability to compile an IL binary at runtime."
+    - $X_RESULT_ERROR_INVALID_SIZE:
+        - "`length == 0`"
 --- #--------------------------------------------------------------------------
 type: function
 desc: "Create a program object from device native binary."
@@ -155,7 +164,7 @@ analogue:
     - "**clBuildProgram**"
 details:
     - "The application may call this function from simultaneous threads."
-    - "Following a succesful call to this entry point, the program passed will contain a binary of the $X_PROGRAM_BINARY_TYPE_EXECUTABLE type for each device in `hContext`."
+    - "Following a successful call to this entry point, the program passed will contain a binary of the $X_PROGRAM_BINARY_TYPE_EXECUTABLE type for each device in `hContext`."
 params:
     - type: $x_context_handle_t
       name: hContext
@@ -182,7 +191,7 @@ analogue:
     - "**clCompileProgram**"
 details:
     - "The application may call this function from simultaneous threads."
-    - "Following a succesful call to this entry point `hProgram` will contain a binary of the $X_PROGRAM_BINARY_TYPE_COMPILED_OBJECT type for each device in `hContext`."
+    - "Following a successful call to this entry point `hProgram` will contain a binary of the $X_PROGRAM_BINARY_TYPE_COMPILED_OBJECT type for each device in `hContext`."
 params:
     - type: $x_context_handle_t
       name: hContext
@@ -209,7 +218,7 @@ analogue:
     - "**clLinkProgram**"
 details:
     - "The application may call this function from simultaneous threads."
-    - "Following a succesful call to this entry point the program returned in `phProgram` will contain a binary of the $X_PROGRAM_BINARY_TYPE_EXECUTABLE type for each device in `hContext`."
+    - "Following a successful call to this entry point the program returned in `phProgram` will contain a binary of the $X_PROGRAM_BINARY_TYPE_EXECUTABLE type for each device in `hContext`."
 params:
     - type: $x_context_handle_t
       name: hContext
@@ -357,6 +366,18 @@ params:
       name: "pPropSizeRet"
       desc: |
             [out][optional] pointer to the actual size in bytes of the queried propName.
+returns:
+    - $X_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
+        - "If `propName` is not supported by the adapter."
+    - $X_RESULT_ERROR_INVALID_SIZE:
+        - "`propSize == 0 && pPropValue != NULL`"
+        - "If `propSize` is less than the real number of bytes needed to return the info."
+    - $X_RESULT_ERROR_INVALID_NULL_POINTER:
+        - "`propSize != 0 && pPropValue == NULL`"
+        - "`pPropValue == NULL && pPropSizeRet == NULL`"
+    - $X_RESULT_ERROR_INVALID_PROGRAM
+    - $X_RESULT_ERROR_OUT_OF_RESOURCES
+    - $X_RESULT_ERROR_OUT_OF_HOST_MEMORY
 --- #--------------------------------------------------------------------------
 type: enum
 desc: "Program object build status"
@@ -493,6 +514,9 @@ params:
       name: phNativeProgram
       desc: |
             [out] a pointer to the native handle of the program.
+returns:
+    - $X_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        - "If the adapter has no underlying equivalent handle."
 --- #--------------------------------------------------------------------------
 type: struct
 desc: "Native program creation properties"
@@ -520,7 +544,7 @@ details:
 params:
     - type: $x_native_handle_t
       name: hNativeProgram
-      desc: "[in] the native handle of the program."
+      desc: "[in][nocheck] the native handle of the program."
     - type: $x_context_handle_t
       name: hContext
       desc: "[in] handle of the context instance"
@@ -530,3 +554,6 @@ params:
     - type: "$x_program_handle_t*"
       name: phProgram
       desc: "[out] pointer to the handle of the program object created."
+returns:
+    - $X_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        - "If the adapter has no underlying equivalent handle."

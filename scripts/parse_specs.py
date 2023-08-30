@@ -1,7 +1,9 @@
 """
- Copyright (C) 2022 Intel Corporation
+ Copyright (C) 2022-2023 Intel Corporation
 
- SPDX-License-Identifier: MIT
+ Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ See LICENSE.TXT
+ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 """
 import os
@@ -14,9 +16,10 @@ import yaml
 import copy
 from templates.helper import param_traits, type_traits, value_traits
 import ctypes
+import itertools
 
-default_version = "0.5"
-all_versions = ["0.5", "1.0", "1.1", "2.0"]
+default_version = "0.7"
+all_versions = ["0.6", "0.7"]
 
 """
     preprocess object
@@ -219,13 +222,16 @@ def _validate_doc(f, d, tags, line_num):
             if ('desc' not in item) or ('name' not in item):
                 raise Exception(prefix+"requires the following scalar fields: {`desc`, `name`}")
 
+            if 'extend' in d and d.get('extend') == True and 'value' not in item:
+                raise Exception(prefix+"must include a value for experimental features: {`value`: `0xabcd`}")
+
             if typed:
                 type = extract_type(item['desc'])
                 if type is None:
                     raise Exception(prefix+"typed etor " + item['name'] + " must begin with a type identifier: [type]")
                 type_name = _subt(type, tags)
                 if not is_iso(type_name):
-                    raise Exception(prefix+"type " + str(type) + " in a typed etor " + item['name'] + " must be a valid ISO C identifer")
+                    raise Exception(prefix+"type " + str(type) + " in a typed etor " + item['name'] + " must be a valid ISO C identifier")
 
             __validate_name(item, 'name', tags, case='upper', prefix=prefix)
 
@@ -286,6 +292,9 @@ def _validate_doc(f, d, tags, line_num):
             if item['type'].endswith("flag_t"):
                 raise Exception(prefix+"'type' must not be '*_flag_t': %s"%item['type'])
 
+            if d['type'] == 'union'and item.get('tag') is None:
+                raise Exception(prefix + f"union member {item['name']} must include a 'tag' annotation")
+
             ver = __validate_version(item, prefix=prefix, base_version=d_ver)
             if ver < max_ver:
                 raise Exception(prefix+"'version' must be increasing: %s"%item['version'])
@@ -324,12 +333,20 @@ def _validate_doc(f, d, tags, line_num):
 
             if item['type'].endswith("flag_t"):
                 raise Exception(prefix+"'type' must not be '*_flag_t': %s"%item['type'])
+        
+            if type_traits.is_pointer(item['type']) and "_handle_t" in item['type'] and "[in]" in item['desc']:
+                if not param_traits.is_range(item):
+                    raise Exception(prefix+"handle type must include a range(start, end) as part of 'desc'")
 
             ver = __validate_version(item, prefix=prefix, base_version=d_ver)
             if ver < max_ver:
                 raise Exception(prefix+"'version' must be increasing: %s"%item['version'])
             max_ver = ver
-
+    
+    def __validate_union_tag(d):
+        if d.get('tag') is None:
+            raise Exception(f"{d['name']} must include a 'tag' part of the union.")
+        
     try:
         if 'type' not in d:
             raise Exception("every document must have 'type'")
@@ -391,6 +408,8 @@ def _validate_doc(f, d, tags, line_num):
             if ('desc' not in d) or ('name' not in d):
                 raise Exception("'%s' requires the following scalar fields: {`desc`, `name`}"%d['type'])
 
+            if d['type'] == 'union':
+                __validate_union_tag(d)
             __validate_type(d, 'name', tags)
             __validate_base(d)
             __validate_members(d, tags)
@@ -428,7 +447,7 @@ def _validate_doc(f, d, tags, line_num):
         print("%s(%s): %s!"%(os.path.abspath(f), line_num, msg))
         print("-- Function Info --")
         print(d)
-        return False
+        raise
 
 """
     filters object by version
@@ -552,6 +571,8 @@ def _generate_meta(d, ordinal, meta):
             for idx, etor in enumerate(d['etors']):
                 meta[type][name]['etors'].append(etor['name'])
                 value = _get_etor_value(etor.get('value'), value)
+                if not etor.get('value'):
+                    etor['value'] = str(value)
                 if type_traits.is_flags(name):
                     bit_mask |= value
                 if value > max_value:
@@ -562,7 +583,7 @@ def _generate_meta(d, ordinal, meta):
                 if bit_mask != 0:
                     meta[type][name]['bit_mask'] = hex(ctypes.c_uint32(~bit_mask).value)
             else:
-                meta[type][name]['max'] = d['etors'][idx]['name']
+                meta[type][name]['max'] = d['etors'][max_index]['name']
 
         elif 'macro' == type:
             meta[type][name]['values'] = []
@@ -673,7 +694,8 @@ def _generate_returns(obj, meta):
         rets = [
             {"$X_RESULT_SUCCESS":[]},
             {"$X_RESULT_ERROR_UNINITIALIZED":[]},
-            {"$X_RESULT_ERROR_DEVICE_LOST":[]}
+            {"$X_RESULT_ERROR_DEVICE_LOST":[]},
+            {"$X_RESULT_ERROR_ADAPTER_SPECIFIC": []}
             ]
 
         # special function for appending to our list of dicts; avoiding duplicates
@@ -750,6 +772,13 @@ def _generate_returns(obj, meta):
         obj['returns'] = rets
     return obj
 
+
+def _inline_extended_structs(specs, meta):
+    for s in specs:
+        for i, obj in enumerate(s['objects']):
+            obj = _inline_base(obj, meta)
+            s['objects'][i] = obj
+
 """
     generates extra content
 """
@@ -757,7 +786,6 @@ def _generate_extra(specs, meta):
     for s in specs:
         for i, obj in enumerate(s['objects']):
             obj = _generate_hash(obj)
-            obj = _inline_base(obj, meta)
             obj = _generate_returns(obj, meta)
             s['objects'][i] = obj
 
@@ -791,6 +819,48 @@ def _generate_ref(specs, tags, ref):
 
     return ref
 
+def _refresh_enum_meta(obj, meta):
+    ## remove the existing meta records
+    if obj.get('class'):
+        meta['class'][obj['class']]['enum'].remove(obj['name'])
+        
+    if meta['enum'].get(obj['name']):
+        del meta['enum'][obj['name']]
+    ## re-generate meta
+    meta = _generate_meta(obj, None, meta)
+
+
+def _validate_ext_enum_range(extension, enum) -> bool:
+    try:
+        existing_values = [_get_etor_value(etor.get('value'), None) for etor in enum['etors']]
+        for ext in extension['etors']:
+            value = _get_etor_value(ext.get('value'), None)
+            if value in existing_values:
+                return False
+            return True
+    except:
+        return False
+
+def _extend_enums(enum_extensions, specs, meta):
+    enum_extensions = sorted(enum_extensions, key= lambda x : x['name'])
+    enum_groups = [(k, list(g)) for k, g in itertools.groupby(enum_extensions, key=lambda x : x['name'])]
+
+    for k, group in enum_groups:
+        matching_enum = [obj for s in specs for obj in s['objects'] if obj['type'] == 'enum' and k == obj['name'] and not obj.get('extend')][0]
+        for i, extension in enumerate(group):
+            if not _validate_ext_enum_range(extension, matching_enum):
+                raise Exception(f"Invalid enum values.")
+            matching_enum['etors'].extend(extension['etors'])
+        
+        _refresh_enum_meta(matching_enum, meta)
+
+        ## Sort the etors
+        value = -1
+        def sort_etors(x):
+            nonlocal value 
+            value = _get_etor_value(x.get('value'), value)
+            return value
+        matching_enum['etors'] = sorted(matching_enum['etors'], key=sort_etors)
 
 """
 Entry-point:
@@ -802,18 +872,17 @@ def parse(section, version, tags, meta, ref):
     specs = []
 
     files = util.findFiles(path, "*.yml")
-    # make sure registry is last, because it's autogenerated based on the rest of the spec
-    files = sorted(files, key=lambda f: 1 if f.endswith('registry.yml') else 0)
+    registry = [f for f in files if f.endswith('registry.yml')][0]
 
+    enum_extensions = []
     for f in files:
-        if f.endswith('registry.yml'):
-            generate_ids.generate_registry(f, specs)
 
         print("Parsing %s..."%f)
         docs = util.yamlRead(f)
         line_nums = _get_line_nums(f)
 
         header = None
+        name = None
         objects = []
 
         for i, d in enumerate(docs):
@@ -825,25 +894,42 @@ def parse(section, version, tags, meta, ref):
             if not d:
                 continue
 
+            if d['type'] == "enum" and d.get("extend") == True:
+                # enum extensions are resolved later
+                enum_extensions.append(d)
+                continue
+
             # extract header from objects
             if re.match(r"header", d['type']):
                 header = d
                 header['ordinal'] = int(int(header.get('ordinal',"1000")) * float(header.get('version',"1.0")))
                 header['ordinal'] *= 1000 if re.match(r"extension", header.get('desc',"").lower()) else 1
                 header['ordinal'] *= 1000 if re.match(r"experimental", header.get('desc',"").lower()) else 1
+                basename = os.path.splitext(os.path.basename(f))[0]
+                if 'name' in header:
+                    name = header['name']
+                elif basename.startswith('exp-'):
+                    name = f'{basename[len("exp-"):]} (experimental)'
+                else:
+                    name = basename
+                for c in '_-':
+                    name = name.replace(c, ' ')
             elif header:
-                # for d in _make_versions(d, float(version)):
-                objects.append(d)
-                meta = _generate_meta(d, header['ordinal'], meta)
+                for d in _make_versions(d, float(version)):
+                    objects.append(d)
+                    meta = _generate_meta(d, header['ordinal'], meta)
 
         if header:
             specs.append({
-                'name'      : os.path.splitext(os.path.basename(f))[0],
+                'name'      : name,
                 'header'    : header,
                 'objects'   : objects,
             })
 
     specs = sorted(specs, key=lambda s: s['header']['ordinal'])
+    _inline_extended_structs(specs, meta)
+    generate_ids.generate_registry(registry, specs, meta, _refresh_enum_meta)
+    _extend_enums(enum_extensions, specs, meta)
     _generate_extra(specs, meta)
 
     ref = _generate_ref(specs, tags, ref)

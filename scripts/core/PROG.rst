@@ -1,4 +1,4 @@
-﻿
+
 <%
     OneApi=tags['$OneApi']
     x=tags['$x']
@@ -51,20 +51,28 @@ Initialization and Discovery
 
 .. parsed-literal::
 
+    // Discover all available adapters
+    uint32_t adapterCount = 0;
+    ${x}AdapterGet(0, nullptr, &adapterCount);
+    std::vector<${x}_adapter_handle_t> adapters(adapterCount);
+    ${x}AdapterGet(adapterCount, adapters.data(), nullptr);
+
     // Discover all the platform instances
     uint32_t platformCount = 0;
-    ${x}PlatformGet(0, nullptr, &platformCount);
+    ${x}PlatformGet(adapters.data(), adapterCount, 0, nullptr, &platformCount);
 
     std::vector<${x}_platform_handle_t> platforms(platformCount);
-    ${x}PlatformGet(platform.size(), platforms.data(), &platformCount);
+    ${x}PlatformGet(adapters.data(), adapterCount, platform.size(), platforms.data(), &platformCount);
 
     // Get number of total GPU devices in the platform
     uint32_t deviceCount = 0;
-    ${x}DeviceGet(platforms[0], ${X}_DEVICE_TYPE_GPU, &deviceCount, nullptr, nullptr);
+    ${x}DeviceGet(platforms[0], ${X}_DEVICE_TYPE_GPU, &deviceCount, nullptr, 
+                  nullptr);
 
     // Get handles of all GPU devices in the platform
     std::vector<${x}_device_handle_t> devices(deviceCount);
-    ${x}DeviceGet(platforms[0], ${X}_DEVICE_TYPE_GPU, &deviceCount, devices.data(), devices.size());
+    ${x}DeviceGet(platforms[0], ${X}_DEVICE_TYPE_GPU, &deviceCount, 
+                  devices.data(), devices.size());
 
 Device handle lifetime
 ----------------------
@@ -97,7 +105,8 @@ In case where the info size is only known at runtime then two calls are needed, 
 
     // Size is known beforehand
     ${x}_device_type_t deviceType;
-    ${x}DeviceGetInfo(hDevice, ${X}_DEVICE_INFO_TYPE, sizeof(${x}_device_type_t), &deviceType, nullptr);
+    ${x}DeviceGetInfo(hDevice, ${X}_DEVICE_INFO_TYPE, 
+                      sizeof(${x}_device_type_t), &deviceType, nullptr);
 
     // Size is only known at runtime
     size_t infoSize;
@@ -105,7 +114,8 @@ In case where the info size is only known at runtime then two calls are needed, 
     
     std::string deviceName;
     DeviceName.resize(infoSize);
-    ${x}DeviceGetInfo(hDevice, ${X}_DEVICE_INFO_NAME, infoSize, deviceName.data(), nullptr);
+    ${x}DeviceGetInfo(hDevice, ${X}_DEVICE_INFO_NAME, infoSize, 
+                      deviceName.data(), nullptr);
 
 Device partitioning into sub-devices
 ------------------------------------
@@ -117,29 +127,37 @@ fixed part of the parent device, which can explicitly be programmed individually
 .. parsed-literal::
 
     ${x}_device_handle_t hDevice;
-    ${x}_device_partition_property_t properties[] = { 
-               ${X}_DEVICE_PARTITION_BY_AFFINITY_DOMAIN,
-               ${X}_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE,
-               0};
+    ${x}_device_partition_property_t prop;
+    prop.value.affinity_domain = ${X}_DEVICE_AFFINITY_DOMAIN_FLAG_NEXT_PARTITIONABLE;
+
+    ur_device_partition_properties_t properties{
+        ${X}_STRUCTURE_TYPE_DEVICE_PARTITION_PROPERTIES,
+        nullptr,
+        &prop,
+        1,
+    };
 
     uint32_t count = 0;
     std::vector<${x}_device_handle_t> subDevices;
-    ${x}DevicePartition(hDevice, &properties, &count, nullptr, nullptr);
+    ${x}DevicePartition(hDevice, &properties, 0, nullptr, &count);
 
     if (count > 0) {
         subDevices.resize(count);
-        ${x}DevicePartition(Device, &properties, &count, &subDevices.data(), nullptr);
+        ${x}DevicePartition(Device, &properties, count, &subDevices.data(), 
+                            nullptr);
     }
 
 The returned sub-devices may be requested for further partitioning into sub-sub-devices, and so on.
-An implementation would return "0" in the count if no further partitioning is supported.
+An implementation will return "0" in the count if no further partitioning is supported.
 
 .. parsed-literal::
 
-    uint32_t count = 1;
-    ${x}_device_handle_t hSubSubDevice;
-    ${x}DevicePartition(subDevices[0], properties, &count, &hSubSubDevice, nullptr);
-
+    uint32_t count;
+    ${x}DevicePartition(subDevices[0], &properties, 0, nullptr, &count);
+    if(count == 0){
+        // no further partitioning allowed
+    }
+    
 Contexts
 ========
 
@@ -151,7 +169,8 @@ events, and programs are explicitly created against a context. A trivial work wi
 
     uint32_t deviceCount = 1;
     ${x}_device_handle_t hDevice;
-    ${x}DeviceGet(hPlatform, ${X}_DEVICE_TYPE_GPU, &deviceCount, &hDevice, nullptr);
+    ${x}DeviceGet(hPlatform, ${X}_DEVICE_TYPE_GPU, &deviceCount, &hDevice, 
+                  nullptr);
 
     // Create a context
     ${x}_context_handle_t hContext;
@@ -209,9 +228,9 @@ explicit and implicit kernel arguments along with data needed for launch.
     // Create kernel object from program
     ${x}_kernel_handle_t hKernel;
     ${x}KernelCreate(hProgram, "addVectors", &hKernel);
-    ${x}KernelSetArgMemObj(hKernel, 0, A);
-    ${x}KernelSetArgMemObj(hKernel, 1, B);
-    ${x}KernelSetArgMemObj(hKernel, 2, C);
+    ${x}KernelSetArgMemObj(hKernel, 0, nullptr, A);
+    ${x}KernelSetArgMemObj(hKernel, 1, nullptr, B);
+    ${x}KernelSetArgMemObj(hKernel, 2, nullptr, C);
 
 Queue and Enqueue
 =================
@@ -227,14 +246,16 @@ queue is created.
 
     // Create an out of order queue for hDevice in hContext
     ${x}_queue_handle_t hQueue;
-    ${x}QueueCreate(hContext, hDevice, ${X}_QUEUE_FLAG_OUT_OF_ORDER_EXEC_MODE_ENABLE, &hQueue);
+    ${x}QueueCreate(hContext, hDevice, 
+                    ${X}_QUEUE_FLAG_OUT_OF_ORDER_EXEC_MODE_ENABLE, &hQueue);
 
-    // Lanuch a kernel with 3D workspace partitioning
+    // Launch a kernel with 3D workspace partitioning
     const uint32_t nDim = 3;
     const size_t gWorkOffset = {0, 0, 0};
     const size_t gWorkSize = {128, 128, 128};
     const size_t lWorkSize = {1, 8, 8}; 
-    ${x}EnqueueKernelLaunch(hQueue, hKernel, nDim, gWorkOffset, gWorkSize, lWorkSize, 0, nullptr, nullptr);
+    ${x}EnqueueKernelLaunch(hQueue, hKernel, nDim, gWorkOffset, gWorkSize, 
+                            lWorkSize, 0, nullptr, nullptr);
 
 Queue object lifetime
 ---------------------

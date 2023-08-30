@@ -1,11 +1,19 @@
 // Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <map>
 #include <uur/fixtures.h>
 
-using urUSMAllocInfoTest =
-    uur::urUSMDeviceAllocTestWithParam<ur_usm_alloc_info_t>;
+struct urUSMAllocInfoTest
+    : uur::urUSMDeviceAllocTestWithParam<ur_usm_alloc_info_t> {
+    void SetUp() override {
+        use_pool = getParam() == UR_USM_ALLOC_INFO_POOL;
+        UUR_RETURN_ON_FATAL_FAILURE(
+            uur::urUSMDeviceAllocTestWithParam<ur_usm_alloc_info_t>::SetUp());
+    }
+};
 
 UUR_TEST_SUITE_P(urUSMAllocInfoTest,
                  ::testing::Values(UR_USM_ALLOC_INFO_TYPE,
@@ -69,7 +77,7 @@ TEST_P(urUSMGetMemAllocInfoTest, InvalidEnumeration) {
 
 TEST_P(urUSMGetMemAllocInfoTest, InvalidValuePropSize) {
     ur_usm_type_t USMType;
-    ASSERT_EQ_RESULT(UR_RESULT_ERROR_INVALID_VALUE,
+    ASSERT_EQ_RESULT(UR_RESULT_ERROR_INVALID_SIZE,
                      urUSMGetMemAllocInfo(context, ptr, UR_USM_ALLOC_INFO_TYPE,
                                           sizeof(ur_usm_type_t) - 1, &USMType,
                                           nullptr));

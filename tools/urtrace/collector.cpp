@@ -1,7 +1,9 @@
 /*
  * Copyright (C) 2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file collector.cpp
  *
@@ -179,7 +181,7 @@ static class cli_args {
     bool no_args;
     enum output_format output_format;
     std::optional<std::string>
-        filter_str; //the filter_str is kept primarly for printing.
+        filter_str; //the filter_str is kept primarily for printing.
     std::optional<std::regex> filter;
 } cli_args;
 

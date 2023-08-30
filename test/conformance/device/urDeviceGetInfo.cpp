@@ -1,5 +1,7 @@
 // Copyright (C) 2022-2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <map>
 #include <uur/fixtures.h>
@@ -10,7 +12,6 @@ static std::unordered_map<ur_device_info_t, size_t> device_info_size_map = {
     {UR_DEVICE_INFO_DEVICE_ID, sizeof(uint32_t)},
     {UR_DEVICE_INFO_MAX_COMPUTE_UNITS, sizeof(uint32_t)},
     {UR_DEVICE_INFO_MAX_WORK_ITEM_DIMENSIONS, sizeof(uint32_t)},
-    {UR_DEVICE_INFO_MAX_WORK_GROUP_SIZE, sizeof(size_t)},
     {UR_DEVICE_INFO_MAX_WORK_GROUP_SIZE, sizeof(size_t)},
     {UR_DEVICE_INFO_SINGLE_FP_CONFIG, sizeof(ur_device_fp_capability_flags_t)},
     {UR_DEVICE_INFO_HALF_FP_CONFIG, sizeof(ur_device_fp_capability_flags_t)},
@@ -105,7 +106,7 @@ static std::unordered_map<ur_device_info_t, size_t> device_info_size_map = {
     {UR_DEVICE_INFO_BFLOAT16, sizeof(ur_bool_t)},
     {UR_DEVICE_INFO_MAX_COMPUTE_QUEUE_INDICES, sizeof(uint32_t)},
     {UR_DEVICE_INFO_KERNEL_SET_SPECIALIZATION_CONSTANTS, sizeof(ur_bool_t)},
-    {UR_DEVICE_INFO_MEMORY_BUS_WIDTH, sizeof(ur_bool_t)},
+    {UR_DEVICE_INFO_MEMORY_BUS_WIDTH, sizeof(uint32_t)},
     {UR_DEVICE_INFO_MAX_WORK_GROUPS_3D, sizeof(size_t[3])},
     {UR_DEVICE_INFO_ASYNC_BARRIER, sizeof(ur_bool_t)},
     {UR_DEVICE_INFO_MEM_CHANNEL_SUPPORT, sizeof(ur_bool_t)},
@@ -198,7 +199,7 @@ INSTANTIATE_TEST_SUITE_P(
         UR_DEVICE_INFO_PRINTF_BUFFER_SIZE,                     //
         UR_DEVICE_INFO_PREFERRED_INTEROP_USER_SYNC,            //
         UR_DEVICE_INFO_PARENT_DEVICE,                          //
-        UR_DEVICE_INFO_PARTITION_PROPERTIES,                   //
+        UR_DEVICE_INFO_SUPPORTED_PARTITIONS,                   //
         UR_DEVICE_INFO_PARTITION_MAX_SUB_DEVICES,              //
         UR_DEVICE_INFO_PARTITION_AFFINITY_DOMAIN,              //
         UR_DEVICE_INFO_PARTITION_TYPE,                         //
@@ -230,7 +231,8 @@ INSTANTIATE_TEST_SUITE_P(
         UR_DEVICE_INFO_ASYNC_BARRIER,                          //
         UR_DEVICE_INFO_MEM_CHANNEL_SUPPORT,                    //
         UR_DEVICE_INFO_HOST_PIPE_READ_WRITE_SUPPORTED,         //
-        UR_DEVICE_INFO_MAX_REGISTERS_PER_WORK_GROUP            //
+        UR_DEVICE_INFO_MAX_REGISTERS_PER_WORK_GROUP,           //
+        UR_DEVICE_INFO_VIRTUAL_MEMORY_SUPPORT                  //
         ),
     [](const ::testing::TestParamInfo<ur_device_info_t> &info) {
         std::stringstream ss;
@@ -256,7 +258,7 @@ TEST_P(urDeviceGetInfoTest, Success) {
             ASSERT_SUCCESS(urDeviceGetInfo(device, info_type, size,
                                            info_data.data(), nullptr));
         } else {
-            ASSERT_EQ_RESULT(result, UR_RESULT_ERROR_INVALID_ENUMERATION);
+            ASSERT_EQ_RESULT(result, UR_RESULT_ERROR_UNSUPPORTED_ENUMERATION);
         }
     }
 }
@@ -279,11 +281,39 @@ TEST_P(urDeviceGetInfoTest, InvalidEnumerationInfoType) {
     }
 }
 
-TEST_P(urDeviceGetInfoTest, InvalidValuePropSize) {
+TEST_P(urDeviceGetInfoTest, InvalidSizePropSize) {
     for (auto device : devices) {
         ur_device_type_t device_type;
-        ASSERT_EQ_RESULT(UR_RESULT_ERROR_INVALID_VALUE,
+        ASSERT_EQ_RESULT(UR_RESULT_ERROR_INVALID_SIZE,
                          urDeviceGetInfo(device, UR_DEVICE_INFO_TYPE, 0,
                                          &device_type, nullptr));
+    }
+}
+
+TEST_P(urDeviceGetInfoTest, InvalidSizePropSizeSmall) {
+    for (auto device : devices) {
+        ur_device_type_t device_type;
+        ASSERT_EQ_RESULT(UR_RESULT_ERROR_INVALID_SIZE,
+                         urDeviceGetInfo(device, UR_DEVICE_INFO_TYPE,
+                                         sizeof(device_type) - 1, &device_type,
+                                         nullptr));
+    }
+}
+
+TEST_P(urDeviceGetInfoTest, InvalidNullPointerPropValue) {
+    for (auto device : devices) {
+        ur_device_type_t device_type;
+        ASSERT_EQ_RESULT(UR_RESULT_ERROR_INVALID_NULL_POINTER,
+                         urDeviceGetInfo(device, UR_DEVICE_INFO_TYPE,
+                                         sizeof(device_type), nullptr,
+                                         nullptr));
+    }
+}
+
+TEST_P(urDeviceGetInfoTest, InvalidNullPointerPropSizeRet) {
+    for (auto device : devices) {
+        ASSERT_EQ_RESULT(
+            UR_RESULT_ERROR_INVALID_NULL_POINTER,
+            urDeviceGetInfo(device, UR_DEVICE_INFO_TYPE, 0, nullptr, nullptr));
     }
 }

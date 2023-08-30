@@ -10,7 +10,9 @@ from templates import helper as th
  *
  * Copyright (C) 2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file ${name}.cpp
  *
@@ -22,7 +24,7 @@ from templates import helper as th
 
 namespace ur_tracing_layer
 {
-    %for obj in th.extract_objs(specs, r"function"):
+    %for obj in th.get_adapter_functions(specs):
     ///////////////////////////////////////////////////////////////////////////////
     /// @brief Intercept function for ${th.make_func_name(n, tags, obj)}
     %if 'condition' in obj:
@@ -100,9 +102,14 @@ namespace ur_tracing_layer
     }
     %endfor
 
-    ${x}_result_t context_t::init(ur_dditable_t *dditable)
-    {
+    ${x}_result_t
+    context_t::init(ur_dditable_t *dditable,
+                    const std::set<std::string> &enabledLayerNames) {
         ${x}_result_t result = ${X}_RESULT_SUCCESS;
+        
+        if(!enabledLayerNames.count(name)) {
+            return result;
+        }
 
     %for tbl in th.get_pfntables(specs, meta, n, tags):
         if( ${X}_RESULT_SUCCESS == result )

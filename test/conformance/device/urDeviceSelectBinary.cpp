@@ -1,5 +1,7 @@
 // Copyright (C) 2022-2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include <uur/fixtures.h>
 using urDeviceSelectBinaryTest = uur::urAllDevicesTest;
 
@@ -54,7 +56,7 @@ TEST_F(urDeviceSelectBinaryTest, InvalidValueNumBinaries) {
     for (auto device : devices) {
         uint32_t selected_binary;
         ASSERT_EQ_RESULT(
-            UR_RESULT_ERROR_INVALID_VALUE,
+            UR_RESULT_ERROR_INVALID_SIZE,
             urDeviceSelectBinary(device, binaries, 0, &selected_binary));
     }
 }

@@ -1,5 +1,7 @@
 // Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <cstddef>
 #include <cstring>
@@ -18,8 +20,11 @@ template <typename T> class ParamsTest : public testing::Test {
 struct UrInitParams {
     ur_init_params_t params;
     ur_device_init_flags_t flags;
-    UrInitParams(ur_device_init_flags_t _flags) : flags(_flags) {
+    ur_loader_config_handle_t config;
+    UrInitParams(ur_device_init_flags_t _flags)
+        : flags(_flags), config(nullptr) {
         params.pdevice_flags = &flags;
+        params.phLoaderConfig = &config;
     }
 
     ur_init_params_t *get_struct() { return &params; }
@@ -27,7 +32,9 @@ struct UrInitParams {
 
 struct UrInitParamsNoFlags : UrInitParams {
     UrInitParamsNoFlags() : UrInitParams(0) {}
-    const char *get_expected() { return ".device_flags = 0"; };
+    const char *get_expected() {
+        return ".device_flags = 0, .hLoaderConfig = nullptr";
+    };
 };
 
 struct UrInitParamsInvalidFlags : UrInitParams {
@@ -37,19 +44,26 @@ struct UrInitParamsInvalidFlags : UrInitParams {
     const char *get_expected() {
         return ".device_flags = UR_DEVICE_INIT_FLAG_GPU \\| "
                "UR_DEVICE_INIT_FLAG_MCA \\| unknown bit flags "
-               "11000010000000000000000000000000";
+               "11000010000000000000000000000000, "
+               ".hLoaderConfig = nullptr";
     };
 };
 
 struct UrPlatformGet {
     ur_platform_get_params_t params;
+    uint32_t num_adapters;
+    ur_adapter_handle_t *phAdapters;
     uint32_t num_entries;
     uint32_t *pNumPlatforms;
     ur_platform_handle_t *pPlatforms;
     UrPlatformGet() {
+        num_adapters = 0;
+        phAdapters = nullptr;
         num_entries = 0;
         pPlatforms = nullptr;
         pNumPlatforms = nullptr;
+        params.pNumAdapters = &num_adapters;
+        params.pphAdapters = &phAdapters;
         params.pNumEntries = &num_entries;
         params.pphPlatforms = &pPlatforms;
         params.ppNumPlatforms = &pNumPlatforms;
@@ -61,7 +75,8 @@ struct UrPlatformGet {
 struct UrPlatformGetEmptyArray : UrPlatformGet {
     UrPlatformGetEmptyArray() : UrPlatformGet() {}
     const char *get_expected() {
-        return ".NumEntries = 0, .phPlatforms = \\{\\}, .pNumPlatforms = "
+        return ".phAdapters = \\{\\}, .NumAdapters = 0, .NumEntries = 0, "
+               ".phPlatforms = \\{\\}, .pNumPlatforms = "
                "nullptr";
     };
 };
@@ -77,7 +92,8 @@ struct UrPlatformGetTwoPlatforms : UrPlatformGet {
         pNumPlatforms = &num_platforms;
     }
     const char *get_expected() {
-        return ".NumEntries = 2, .phPlatforms = \\{.+, .+\\}, "
+        return ".phAdapters = \\{\\}, .NumAdapters = 0, .NumEntries = 2, "
+               ".phPlatforms = \\{.+, .+\\}, "
                ".pNumPlatforms = .+ \\(2\\)";
     };
 };
@@ -239,21 +255,22 @@ struct UrDeviceGetInfoParamsInvalidSize : UrDeviceGetInfoParams {
 };
 
 struct UrDeviceGetInfoParamsPartitionArray : UrDeviceGetInfoParams {
-    ur_device_partition_property_t props[3] = {
-        UR_DEVICE_PARTITION_BY_COUNTS, UR_DEVICE_PARTITION_BY_AFFINITY_DOMAIN,
-        UR_DEVICE_PARTITION_BY_CSLICE};
+    ur_device_partition_t props[3] = {UR_DEVICE_PARTITION_BY_COUNTS,
+                                      UR_DEVICE_PARTITION_BY_AFFINITY_DOMAIN,
+                                      UR_DEVICE_PARTITION_BY_CSLICE};
     UrDeviceGetInfoParamsPartitionArray() : UrDeviceGetInfoParams() {
-        propName = UR_DEVICE_INFO_PARTITION_PROPERTIES;
+        propName = UR_DEVICE_INFO_SUPPORTED_PARTITIONS;
         pPropValue = &props;
         propSize = sizeof(props);
         propSizeRet = sizeof(props);
     }
     const char *get_expected() {
         return ".hDevice = nullptr, .propName = "
-               "UR_DEVICE_INFO_PARTITION_PROPERTIES, .propSize "
-               "= 24, .pPropValue = \\{4231, 4232, 4233\\}, .pPropSizeRet = .+ "
-               "\\(24\\)";
-        // TODO: should resolve type values for ur_device_partition_property_t...
+               "UR_DEVICE_INFO_SUPPORTED_PARTITIONS, .propSize "
+               "= 12, .pPropValue = \\{UR_DEVICE_PARTITION_BY_COUNTS, "
+               "UR_DEVICE_PARTITION_BY_AFFINITY_DOMAIN, "
+               "UR_DEVICE_PARTITION_BY_CSLICE\\}, .pPropSizeRet = .+ "
+               "\\(12\\)";
     };
 };
 
@@ -303,6 +320,53 @@ struct UrContextGetInfoParamsDevicesArray : UrContextGetInfoParams {
     };
 };
 
+struct UrProgramMetadataTest {
+    UrProgramMetadataTest() {
+        meta.pName = "MY_META";
+        meta.size = 0;
+        meta.type = UR_PROGRAM_METADATA_TYPE_UINT32;
+        ur_program_metadata_value_t value{};
+        value.data32 = 42;
+        meta.value = value;
+    }
+
+    ur_program_metadata_t &get_struct() { return meta; }
+    const char *get_expected() {
+        return "\\(struct ur_program_metadata_t\\)"
+               "\\{"
+               ".pName = .+ \\(MY_META\\), "
+               ".type = UR_PROGRAM_METADATA_TYPE_UINT32, "
+               ".size = 0, "
+               ".value = \\(union ur_program_metadata_value_t\\)\\{"
+               ".data32 = 42"
+               "\\}"
+               "\\}";
+    }
+    ur_program_metadata_t meta;
+};
+
+struct UrDevicePartitionPropertyTest {
+    UrDevicePartitionPropertyTest() {
+        prop.type = UR_DEVICE_PARTITION_EQUALLY;
+        ur_device_partition_value_t value{};
+        value.equally = 4;
+        prop.value = value;
+    }
+
+    ur_device_partition_property_t &get_struct() { return prop; }
+    const char *get_expected() {
+        return "\\(struct ur_device_partition_property_t\\)"
+               "\\{"
+               ".type = UR_DEVICE_PARTITION_EQUALLY, "
+               ".value = \\(union ur_device_partition_value_t\\)\\{"
+               ".equally = 4"
+               "\\}"
+               "\\}";
+    }
+
+    ur_device_partition_property_t prop;
+};
+
 using testing::Types;
 typedef Types<
     UrInitParamsNoFlags, UrInitParamsInvalidFlags, UrUsmHostAllocParamsEmpty,
@@ -310,7 +374,8 @@ typedef Types<
     UrUsmHostAllocParamsUsmDesc, UrUsmHostAllocParamsHostDesc,
     UrDeviceGetInfoParamsEmpty, UrDeviceGetInfoParamsName,
     UrDeviceGetInfoParamsQueueFlag, UrDeviceGetInfoParamsPartitionArray,
-    UrContextGetInfoParamsDevicesArray, UrDeviceGetInfoParamsInvalidSize>
+    UrContextGetInfoParamsDevicesArray, UrDeviceGetInfoParamsInvalidSize,
+    UrProgramMetadataTest, UrDevicePartitionPropertyTest>
     Implementations;
 
 using ::testing::MatchesRegex;

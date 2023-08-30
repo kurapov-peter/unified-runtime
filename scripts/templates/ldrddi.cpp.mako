@@ -11,7 +11,9 @@ from templates import helper as th
  *
  * Copyright (C) 2022-2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  * @file ${name}.cpp
  *
@@ -22,7 +24,7 @@ from templates import helper as th
 namespace ur_loader
 {
     ///////////////////////////////////////////////////////////////////////////////
-    %for obj in th.extract_objs(specs, r"handle"):
+    %for obj in th.get_adapter_handles(specs):
     %if 'class' in obj:
     <%
         _handle_t = th.subt(n, tags, obj['name'])
@@ -32,7 +34,7 @@ namespace ur_loader
     %endif
     %endfor
 
-    %for obj in th.extract_objs(specs, r"function"):
+    %for obj in th.get_adapter_functions(specs):
     ///////////////////////////////////////////////////////////////////////////////
     /// @brief Intercept function for ${th.make_func_name(n, tags, obj)}
     %if 'condition' in obj:
@@ -47,7 +49,6 @@ namespace ur_loader
     {
         ${x}_result_t result = ${X}_RESULT_SUCCESS;<%
         add_local = False
-        arrays_to_delete = []
     %>
 
         %if re.match(r"Init", obj['name']):
@@ -65,36 +66,65 @@ namespace ur_loader
             platform.dditable.${n}.${th.get_table_name(n, tags, obj)}.${th.make_pfn_name(n, tags, obj)}( ${", ".join(th.make_param_lines(n, tags, obj, format=["name"]))} );
         }
 
+        %elif re.match(r"\w+AdapterGet$", th.make_func_name(n, tags, obj)):
+        
+        size_t adapterIndex = 0;
+        if( nullptr != ${obj['params'][1]['name']} && ${obj['params'][0]['name']} !=0)
+        {
+            for( auto& platform : context->platforms )
+            {
+                platform.dditable.${n}.${th.get_table_name(n, tags, obj)}.${th.make_pfn_name(n, tags, obj)}( 1, &${obj['params'][1]['name']}[adapterIndex], nullptr );
+                try
+                {
+                    ${obj['params'][1]['name']}[adapterIndex] = reinterpret_cast<${n}_adapter_handle_t>(${n}_adapter_factory.getInstance(
+                        ${obj['params'][1]['name']}[adapterIndex], &platform.dditable
+                    ));
+                }
+                catch( std::bad_alloc &)
+                {
+                    result = ${X}_RESULT_ERROR_OUT_OF_HOST_MEMORY;
+                    break;
+                }
+                adapterIndex++;
+            }
+        }
+
+        if( ${obj['params'][2]['name']} != nullptr )
+        {
+            *${obj['params'][2]['name']} = static_cast<uint32_t>(context->platforms.size());
+        }
+
         %elif re.match(r"\w+PlatformGet$", th.make_func_name(n, tags, obj)):
         uint32_t total_platform_handle_count = 0;
 
-        for( auto& platform : context->platforms )
+        for( uint32_t adapter_index = 0; adapter_index < ${obj['params'][1]['name']}; adapter_index++)
         {
-            if(platform.initStatus != ${X}_RESULT_SUCCESS)
-                continue;
+            // extract adapter's function pointer table
+            auto dditable =
+                reinterpret_cast<${n}_platform_object_t *>( ${obj['params'][0]['name']}[adapter_index])->dditable;
 
-            if( ( 0 < ${obj['params'][0]['name']} ) && ( ${obj['params'][0]['name']} == total_platform_handle_count))
+            if( ( 0 < ${obj['params'][2]['name']} ) && ( ${obj['params'][2]['name']} == total_platform_handle_count))
                 break;
 
             uint32_t library_platform_handle_count = 0;
 
-            result = platform.dditable.${n}.${th.get_table_name(n, tags, obj)}.${th.make_pfn_name(n, tags, obj)}( 0, nullptr, &library_platform_handle_count );
+            result = dditable->${n}.${th.get_table_name(n, tags, obj)}.${th.make_pfn_name(n, tags, obj)}( &${obj['params'][0]['name']}[adapter_index], 1, 0, nullptr, &library_platform_handle_count );
             if( ${X}_RESULT_SUCCESS != result ) break;
 
-            if( nullptr != ${obj['params'][1]['name']} && ${obj['params'][0]['name']} !=0)
+            if( nullptr != ${obj['params'][3]['name']} && ${obj['params'][2]['name']} !=0)
             {
-                if( total_platform_handle_count + library_platform_handle_count > ${obj['params'][0]['name']}) {
-                    library_platform_handle_count = ${obj['params'][0]['name']} - total_platform_handle_count;
+                if( total_platform_handle_count + library_platform_handle_count > ${obj['params'][2]['name']}) {
+                    library_platform_handle_count = ${obj['params'][2]['name']} - total_platform_handle_count;
                 }
-                result = platform.dditable.${n}.${th.get_table_name(n, tags, obj)}.${th.make_pfn_name(n, tags, obj)}( library_platform_handle_count, &${obj['params'][1]['name']}[ total_platform_handle_count ], nullptr );
+                result = dditable->${n}.${th.get_table_name(n, tags, obj)}.${th.make_pfn_name(n, tags, obj)}( &${obj['params'][0]['name']}[adapter_index], 1, library_platform_handle_count, &${obj['params'][3]['name']}[ total_platform_handle_count ], nullptr );
                 if( ${X}_RESULT_SUCCESS != result ) break;
 
                 try
                 {
                     for( uint32_t i = 0; i < library_platform_handle_count; ++i ) {
                         uint32_t platform_index = total_platform_handle_count + i;
-                        ${obj['params'][1]['name']}[ platform_index ] = reinterpret_cast<${n}_platform_handle_t>(
-                            ${n}_platform_factory.getInstance( ${obj['params'][1]['name']}[ platform_index ], &platform.dditable ) );
+                        ${obj['params'][3]['name']}[ platform_index ] = reinterpret_cast<${n}_platform_handle_t>(
+                            ${n}_platform_factory.getInstance( ${obj['params'][3]['name']}[ platform_index ], dditable ) );
                     }
                 }
                 catch( std::bad_alloc& )
@@ -106,10 +136,11 @@ namespace ur_loader
             total_platform_handle_count += library_platform_handle_count;
         }
 
-        if( ${X}_RESULT_SUCCESS == result && ${obj['params'][2]['name']} != nullptr )
-            *${obj['params'][2]['name']} = total_platform_handle_count;
+        if( ${X}_RESULT_SUCCESS == result && ${obj['params'][4]['name']} != nullptr )
+            *${obj['params'][4]['name']} = total_platform_handle_count;
 
         %else:
+        <%param_replacements={}%>
         %for i, item in enumerate(th.get_loader_prologue(n, tags, obj, meta)):
         %if 0 == i:
         // extract platform's function pointer table
@@ -121,11 +152,10 @@ namespace ur_loader
         %endif
         %if 'range' in item:
         <%
-        add_local = True%>// convert loader handles to platform handles
-        auto ${item['name']}Local = new ${item['type']} [${item['range'][1]}];
-        <%
-        arrays_to_delete.append(item['name']+ 'Local')
-        %>for( size_t i = ${item['range'][0]}; ( nullptr != ${item['name']} ) && ( i < ${item['range'][1]} ); ++i )
+        add_local = True
+        param_replacements[item['name']] = item['name'] + 'Local.data()'%>// convert loader handles to platform handles
+        auto ${item['name']}Local = std::vector<${item['type']}>(${item['range'][1]});
+        for( size_t i = ${item['range'][0]}; i < ${item['range'][1]}; ++i )
             ${item['name']}Local[ i ] = reinterpret_cast<${item['obj']}*>( ${item['name']}[ i ] )->handle;
         %else:
         // convert loader handle to platform handle
@@ -139,15 +169,12 @@ namespace ur_loader
         %endfor
         // forward to device-platform
         %if add_local:
-        result = ${th.make_pfn_name(n, tags, obj)}( ${", ".join(th.make_param_lines(n, tags, obj, format=["name", "local"]))} );
-        %for array_name in arrays_to_delete:
-        delete []${array_name};
-        %endfor
+        result = ${th.make_pfn_name(n, tags, obj)}( ${", ".join(th.make_param_lines(n, tags, obj, format=["name", "local"], replacements=param_replacements))} );
         %else:
         result = ${th.make_pfn_name(n, tags, obj)}( ${", ".join(th.make_param_lines(n, tags, obj, format=["name"]))} );
         %endif
-<%
-        del arrays_to_delete
+<% 
+        del param_replacements
         del add_local%>
         %for i, item in enumerate(th.get_loader_epilogue(n, tags, obj, meta)):
         %if 0 == i:

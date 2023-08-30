@@ -1,8 +1,10 @@
 # Copyright (C) 2022-2023 Intel Corporation
-# SPDX-License-Identifier: MIT
+# Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+# See LICENSE.TXT
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 cmake_minimum_required(VERSION 3.14.0 FATAL_ERROR)
-project(unified-runtime VERSION 0.6.0)
+project(unified-runtime VERSION 0.7.0)
 
 include(GNUInstallDirs)
 include(CheckCXXSourceCompiles)
@@ -11,6 +13,10 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(helpers)
+
+if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+  set(CMAKE_FIND_FRAMEWORK NEVER)
+endif()
 
 find_package(Python3 COMPONENTS Interpreter)
 
@@ -24,11 +30,16 @@ option(UR_FORMAT_CPP_STYLE "format code style of C++ sources" OFF)
 option(UR_USE_ASAN "enable AddressSanitizer" OFF)
 option(UR_USE_UBSAN "enable UndefinedBehaviorSanitizer" OFF)
 option(UR_USE_MSAN "enable MemorySanitizer" OFF)
-option(UMA_BUILD_SHARED_LIBRARY "Build UMA as shared library" OFF)
+option(UR_USE_TSAN "enable ThreadSanitizer" OFF)
+option(UMF_BUILD_SHARED_LIBRARY "Build UMF as shared library" OFF)
 option(UR_ENABLE_TRACING "enable api tracing through xpti" OFF)
 option(VAL_USE_LIBBACKTRACE_BACKTRACE "enable libbacktrace validation backtrace for linux" OFF)
 option(UR_BUILD_TOOLS "build ur tools" ON)
+option(UMF_ENABLE_POOL_TRACKING "Build UMF with pool tracking" OFF)
 option(UR_BUILD_ADAPTER_L0 "build level 0 adapter from SYCL" OFF)
+option(UR_BUILD_ADAPTER_OPENCL "build opencl adapter from SYCL" OFF)
+option(UR_BUILD_ADAPTER_CUDA "build cuda adapter from SYCL" OFF)
+option(UR_BUILD_ADAPTER_HIP "build hip adapter from SYCL" OFF)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -47,14 +58,7 @@ if(MSVC)
     set(CUSTOM_COMMAND_BINARY_DIR ${CUSTOM_COMMAND_BINARY_DIR}/$<CONFIG>)
 endif()
 
-# CXX flags setup
 if(NOT MSVC)
-    add_compile_options(-fPIC -Wall -Wpedantic
-        $<$<CXX_COMPILER_ID:GNU>:-fdiagnostics-color=always>
-        $<$<CXX_COMPILER_ID:Clang>:-fcolor-diagnostics>)
-    if(UR_DEVELOPER_MODE)
-        add_compile_options(-Werror -fno-omit-frame-pointer)
-    endif()
     # Determine if libstdc++ is being used.
     check_cxx_source_compiles("
         #include <array>
@@ -70,21 +74,13 @@ if(NOT MSVC)
         # is available we still need to link this library.
         link_libraries(stdc++fs)
     endif()
-elseif(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
-    add_compile_options(/MP /W3 /MD$<$<CONFIG:Debug>:d>)
-
-    if(UR_DEVELOPER_MODE)
-        add_compile_options(/WX)
-    endif()
 endif()
 
 if(UR_ENABLE_TRACING)
     add_compile_definitions(UR_ENABLE_TRACING)
 
     # fetch xpti proxy library for the tracing layer
-    FetchContentSparse_Declare(xpti https://github.com/intel/llvm.git "sycl-nightly/20230304" "xpti")
+    FetchContentSparse_Declare(xpti https://github.com/intel/llvm.git "sycl-nightly/20230703" "xpti")
     FetchContent_MakeAvailable(xpti)
 
     # set -fPIC for xpti since we are linking it with a shared library
@@ -95,8 +91,16 @@ if(UR_ENABLE_TRACING)
     set(XPTI_SOURCE_DIR ${xpti_SOURCE_DIR})
     set(XPTI_DIR ${xpti_SOURCE_DIR})
     set(XPTI_ENABLE_TESTS OFF CACHE INTERNAL "Turn off xptifw tests")
-    FetchContentSparse_Declare(xptifw https://github.com/intel/llvm.git "sycl-nightly/20230304" "xptifw")
+
+    FetchContentSparse_Declare(xptifw https://github.com/intel/llvm.git "sycl-nightly/20230703" "xptifw")
+
     FetchContent_MakeAvailable(xptifw)
+
+    check_cxx_compiler_flag("-Wno-error=maybe-uninitialized" HAS_MAYBE_UNINIT)
+    if (HAS_MAYBE_UNINIT)
+        target_compile_options(xptifw PRIVATE -Wno-error=maybe-uninitialized)
+    endif()
+
     set_target_properties(xptifw PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     )
@@ -116,6 +120,10 @@ endif()
 
 if(UR_USE_UBSAN)
     add_sanitizer_flag(undefined)
+endif()
+
+if(UR_USE_TSAN)
+    add_sanitizer_flag(thread)
 endif()
 
 if(UR_USE_MSAN)
@@ -153,6 +161,7 @@ endif()
 
 # Obtain files for clang-format
 set(format_glob)
+set(license_glob)
 foreach(dir examples include source test tools)
     list(APPEND format_glob
         "${dir}/*.h"
@@ -163,8 +172,26 @@ foreach(dir examples include source test tools)
         "${dir}/**/*.hpp"
         "${dir}/**/*.c"
         "${dir}/**/*.cpp")
+    list(APPEND license_glob
+        "${dir}/*.yml"
+        "${dir}/**/*.yml"
+        "${dir}/*.py"
+        "${dir}/**/*.py"
+        "${dir}/**/CMakeLists.txt"
+        "${dir}/CMakeLists.txt"
+    )
 endforeach()
 file(GLOB_RECURSE format_src ${format_glob})
+file(GLOB_RECURSE license_src ${license_glob})
+
+# check for licence
+list(FILTER license_src EXCLUDE REGEX "registry.yml")
+add_custom_target(verify-licenses
+    COMMAND ${Python3_EXECUTABLE}
+        "${PROJECT_SOURCE_DIR}/scripts/verify_license.py"
+        "--files" ${format_src} ${license_src}
+    COMMENT "Verify all files contain a license."
+)
 
 # Add code formatter target
 add_custom_target(cppformat)
@@ -229,14 +256,14 @@ install(
 
 set(API_JSON_FILE ${PROJECT_BINARY_DIR}/unified_runtime.json)
 
-# Generate source from the specification
-add_custom_target(generate-code USES_TERMINAL
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/scripts
-    COMMAND ${Python3_EXECUTABLE} run.py --api-json ${API_JSON_FILE}
-    COMMAND ${Python3_EXECUTABLE} json2src.py --api-json ${API_JSON_FILE} ${PROJECT_SOURCE_DIR}
-)
-
 if(UR_FORMAT_CPP_STYLE)
+    # Generate source from the specification
+    add_custom_target(generate-code USES_TERMINAL
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/scripts
+        COMMAND ${Python3_EXECUTABLE} run.py --api-json ${API_JSON_FILE} --clang-format=${CLANG_FORMAT}
+        COMMAND ${Python3_EXECUTABLE} json2src.py --api-json ${API_JSON_FILE} ${PROJECT_SOURCE_DIR}
+    )
+
     # Generate and format source from the specification
     add_custom_target(generate USES_TERMINAL
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target generate-code

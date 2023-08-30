@@ -1,10 +1,16 @@
 // Copyright (C) 2022-2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <cstring>
 #include <fstream>
 
 #include "ur_filesystem_resolved.hpp"
+
+#ifdef KERNELS_ENVIRONMENT
+#include "kernel_entry_points.h"
+#endif
 
 #include <uur/environment.h>
 #include <uur/utils.h>
@@ -37,8 +43,23 @@ std::ostream &operator<<(std::ostream &out,
 uur::PlatformEnvironment::PlatformEnvironment(int argc, char **argv)
     : platform_options{parsePlatformOptions(argc, argv)} {
     instance = this;
+
+    ur_loader_config_handle_t config;
+    if (urLoaderConfigCreate(&config) == UR_RESULT_SUCCESS) {
+        if (urLoaderConfigEnableLayer(config, "UR_LAYER_FULL_VALIDATION")) {
+            urLoaderConfigRelease(config);
+            error = "Failed to enable validation layer";
+            return;
+        }
+    } else {
+        error = "Failed to create loader config handle";
+        return;
+    }
+
     ur_device_init_flags_t device_flags = 0;
-    switch (urInit(device_flags)) {
+    auto initResult = urInit(device_flags, config);
+    auto configReleaseResult = urLoaderConfigRelease(config);
+    switch (initResult) {
     case UR_RESULT_SUCCESS:
         break;
     case UR_RESULT_ERROR_UNINITIALIZED:
@@ -49,8 +70,18 @@ uur::PlatformEnvironment::PlatformEnvironment(int argc, char **argv)
         return;
     }
 
+    if (configReleaseResult) {
+        error = "Failed to destroy loader config handle";
+        return;
+    }
+
+    uint32_t adapter_count = 0;
+    urAdapterGet(0, nullptr, &adapter_count);
+    adapters.resize(adapter_count);
+    urAdapterGet(adapter_count, adapters.data(), nullptr);
+
     uint32_t count = 0;
-    if (urPlatformGet(0, nullptr, &count)) {
+    if (urPlatformGet(adapters.data(), adapter_count, 0, nullptr, &count)) {
         error = "urPlatformGet() failed to get number of platforms.";
         return;
     }
@@ -61,7 +92,8 @@ uur::PlatformEnvironment::PlatformEnvironment(int argc, char **argv)
     }
 
     std::vector<ur_platform_handle_t> platforms(count);
-    if (urPlatformGet(count, platforms.data(), nullptr)) {
+    if (urPlatformGet(adapters.data(), adapter_count, count, platforms.data(),
+                      nullptr)) {
         error = "urPlatformGet failed to get platforms.";
         return;
     }
@@ -123,6 +155,9 @@ void uur::PlatformEnvironment::SetUp() {
 void uur::PlatformEnvironment::TearDown() {
     if (error == ERROR_NO_ADAPTER) {
         return;
+    }
+    for (auto adapter : adapters) {
+        urAdapterRelease(adapter);
     }
     ur_tear_down_params_t tear_down_params{};
     if (urTearDown(&tear_down_params)) {
@@ -195,7 +230,7 @@ void DevicesEnvironment::TearDown() {
 KernelsEnvironment *KernelsEnvironment::instance = nullptr;
 
 KernelsEnvironment::KernelsEnvironment(int argc, char **argv,
-                                       std::string kernels_default_dir)
+                                       const std::string &kernels_default_dir)
     : DevicesEnvironment(argc, argv),
       kernel_options(parseKernelOptions(argc, argv, kernels_default_dir)) {
     instance = this;
@@ -206,7 +241,7 @@ KernelsEnvironment::KernelsEnvironment(int argc, char **argv,
 
 KernelsEnvironment::KernelOptions
 KernelsEnvironment::parseKernelOptions(int argc, char **argv,
-                                       std::string kernels_default_dir) {
+                                       const std::string &kernels_default_dir) {
     KernelOptions options;
     for (int argi = 1; argi < argc; ++argi) {
         const char *arg = argv[argi];
@@ -238,13 +273,11 @@ std::string KernelsEnvironment::getSupportedILPostfix(uint32_t device_index) {
         return {};
     }
 
-    // Delete the ETX character at the end as it is not part of the name.
-    IL_version.pop_back();
-
-    // TODO: Add other IL types like ptx when they are defined how they will be
-    // reported.
+    // TODO: This potentially needs updating as more adapters are tested.
     if (IL_version.find("SPIR-V") != std::string::npos) {
         IL << ".spv";
+    } else if (IL_version.find("nvptx") != std::string::npos) {
+        IL << ".bin";
     } else {
         error = "Undefined IL version: " + IL_version;
         return {};
@@ -322,6 +355,15 @@ void KernelsEnvironment::LoadSource(
         std::make_shared<std::vector<char>>(std::move(device_binary));
     cached_kernels[kernel_name] = binary_ptr;
     binary_out = binary_ptr;
+}
+
+std::vector<std::string>
+KernelsEnvironment::GetEntryPointNames(std::string program_name) {
+    std::vector<std::string> entry_points;
+#ifdef KERNELS_ENVIRONMENT
+    entry_points = uur::device_binaries::program_kernel_map[program_name];
+#endif
+    return entry_points;
 }
 
 void KernelsEnvironment::SetUp() {

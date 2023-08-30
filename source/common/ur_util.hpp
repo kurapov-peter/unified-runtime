@@ -2,7 +2,9 @@
  *
  * Copyright (C) 2022-2023 Intel Corporation
  *
- * SPDX-License-Identifier: MIT
+ * Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See LICENSE.TXT
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  *
  */
 
@@ -41,12 +43,18 @@ inline int ur_getpid(void) { return static_cast<int>(getpid()); }
 #endif
 
 /* define for running with memory sanitizer */
+#if CLANG_HAS_FEATURE(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#define SANITIZER_THREAD
+#endif
+
+/* define for running with memory sanitizer */
 #if CLANG_HAS_FEATURE(memory_sanitizer)
 #define SANITIZER_MEMORY
 #endif
 
 /* define for running with any sanitizer runtime */
-#if defined(SANITIZER_MEMORY) || defined(SANITIZER_ADDRESS)
+#if defined(SANITIZER_MEMORY) || defined(SANITIZER_ADDRESS) ||                 \
+    defined(SANITIZER_THREAD)
 #define SANITIZER_ANY
 #endif
 ///////////////////////////////////////////////////////////////////////////////
@@ -55,7 +63,11 @@ inline int ur_getpid(void) { return static_cast<int>(getpid()); }
 #define MAKE_LIBRARY_NAME(NAME, VERSION) NAME ".dll"
 #else
 #define HMODULE void *
+#if defined(__APPLE__)
+#define MAKE_LIBRARY_NAME(NAME, VERSION) "lib" NAME "." VERSION ".dylib"
+#else
 #define MAKE_LIBRARY_NAME(NAME, VERSION) "lib" NAME ".so." VERSION
+#endif
 #endif
 
 inline std::string create_library_path(const char *name, const char *path) {
@@ -86,7 +98,7 @@ inline std::optional<std::string> ur_getenv(const char *name) {
 #if defined(_WIN32)
     constexpr int buffer_size = 1024;
     char buffer[buffer_size];
-    auto rc = GetEnvironmentVariable(name, buffer, buffer_size);
+    auto rc = GetEnvironmentVariableA(name, buffer, buffer_size);
     if (0 != rc && rc < buffer_size) {
         return std::string(buffer);
     } else if (rc >= buffer_size) {

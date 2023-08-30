@@ -20,7 +20,7 @@ This document describes the YaML format used by the scripts for the API specific
 * A header requires the following scalar fields: {`desc`}
   - `desc` will be used as the region description comment
 * A header may take the following optional scalar fields: {`ordinal`, `version`}
-  - `ordinal` will be used to override the default order (alphebetical) in which regions appear in the specification; `default="1000"`. Multiple regions with the same ordinal will be ordered alphebetically.
+  - `ordinal` will be used to override the default order (alphabetical) in which regions appear in the specification; `default="1000"`. Multiple regions with the same ordinal will be ordered alphabetically.
   - `version` can be used to define the minimum API version for all documents in the yml file; `default="1.0"`
 
 <table>
@@ -238,12 +238,13 @@ std::function<void(void*)> ur_callback_t;
 * A handle requires the following scalar fields: {`desc`, `name`}
   - `desc` will be used as the handles's description comment
   - `name` must be a unique ISO-C standard identifier, start with `$` tag, be snake_case and end with `_handle_t`
-* A handle may take the following optional scalar fields: {`class`, `alias`, `condition`, `ordinal`, `version`}
+* A handle may take the following optional scalar fields: {`class`, `alias`, `condition`, `ordinal`, `version`, `loader_only`}
   - `class` will be used to scope the handles declaration within the specified C++ class
   - `alias` will be used to declare the handle as an alias of another handle; specifically, aliases in another namespace
   - `condition` will be used as a C/C++ preprocessor `#if` conditional expression
   - `ordinal` will be used to override the default order (in which they appear) the handles appears within its section; `default="1000"`
   - `version` will be used to define the minimum API version in which the handles will appear; `default="1.0"` This will also affect the order in which the handles appears within its section.
+  - `loader_only` will be used to decide whether the handle can be instantiated and managed only by the loader.
 * A handle may take the following optional field which can be a scalar, a sequence of scalars or scalars to sequences: {`details`}
   - `details` will be used as the handle's detailed comment
 
@@ -318,11 +319,14 @@ class ur_name_handle_t(c_void_p):
   - `desc` will be used as the enum's description comment
   - `name` must be a unique ISO-C standard identifier, start with `$` tag, be snake_case and end with `_t`
   - `name` that endswith `_flags_t` will be used to create bitfields
-* An enum may take the following optional scalar fields: {`class`, `condition`, `ordinal`, `version`, `typed_etors`}
+* An enum may take the following optional scalar fields: {`class`, `condition`, `ordinal`, `version`, `typed_etors`, `extend`}
   - `class` will be used to scope the enum declaration within the specified C++ class
   - `condition` will be used as a C/C++ preprocessor `#if` conditional expression
   - `ordinal` will be used to override the default order (in which they appear) the enum appears within its section; `default="1000"`
   - `version` will be used to define the minimum API version in which the enum will appear; `default="1.0"` This will also affect the order in which the enum appears within its section and class.
+  - `extend` will be used to extend an existing enum with additional `etors`, 
+  usually used to implement experimental features. `type` *must* refer to an 
+  existing enum and each `etor` must include a unique `value`.
   - `typed_etors` boolean value that will be used to determine whether the enum's values have associated types.
 * An enum requires the following sequence of mappings: {`etors`}
   - An etor requires the following scalar fields: {`name`, `desc`}
@@ -451,6 +455,8 @@ class ur_name_flags_v(IntEnum):
   - `name` must be a unique ISO-C standard identifier, start with `$` tag, be snake_case and end with `_t`
     + The special-case descriptor struct should always end with `_desc_t`
     + The special-case property struct should always end with `_properties_t`
+* A union requires the following 
+  - `tag` is a reference to an enum type that will be used to describe which field of the union to access.
 * A struct|union may take the following optional scalar fields: {`class`, `base`, `condition`, `ordinal`, `version`}
   - `class` will be used to scope the struct|union declaration within the specified C++ class
   - `base` will be used as the base type of the structure
@@ -465,6 +471,8 @@ class ur_name_flags_v(IntEnum):
       - `out` is used for members that are write-only; if the member is a pointer, then the memory being pointed to is also write-only
       - `in,out` is used for members that are both read and write; typically this is used for pointers to other data structures that contain both read and write members
       - `nocheck` is used to specify that no additional validation checks will be generated.
+    + `desc` must also include the following annotation when describing a union: {`"tagged_by(param)"`}
+      - `tagged_by` is used to specify which parameter will be used as the tag for accessing the union.
     + `desc` may include one the following annotations: {`"[optional]"`, `"[typename(typeVarName, sizeVarName)]"`}
       - `optional` is used for members that are pointers where it is legal for the value to be `nullptr`
       - `typename` is used to denote the type enum for params that are opaque pointers to values of tagged data types.
@@ -474,6 +482,7 @@ class ur_name_flags_v(IntEnum):
     + `init` will be used to initialize the C++ struct|union member's value
     + `init` must be an ISO-C standard identifier or literal
     + `version` will be used to define the minimum API version in which the member will appear; `default="1.0"` This will also affect the order in which the member appears within the struct|union.
+    + `tag` applies only to unions and refers to a value for when this member can be accessed.
 * A struct|union may take the following optional field which can be a scalar, a sequence of scalars or scalars to sequences: {`details`}
   - `details` will be used as the struct|union's detailed comment
 
@@ -591,12 +600,14 @@ class ur_name_t(Structure):
 * A function requires the following scalar fields: {`desc`, `name`}
   - `desc` will be used as the function's description comment
   - `name` must be a unique ISO-C standard identifier, and be PascalCase
-* A function may take the following optional scalar fields: {`class`, `decl`, `condition`, `ordinal`, `version`}
+* A function may take the following optional scalar fields: {`class`, `decl`, `condition`, `ordinal`, `version`, `loader_only`}
   - `class` will be used to scope the function declaration within the specified C++ class
   - `decl` will be used to specify the function's linkage as one of the following: {`static`}
   - `condition` will be used as a C/C++ preprocessor `#if` conditional expression
   - `ordinal` will be used to override the default order (in which they appear) the function appears within its section; `default="1000"`
   - `version` will be used to define the minimum API version in which the function will appear; `default="1.0"` This will also affect the order in which the function appears within its section and class.
+  - `loader_only` will be used to decide whether the function will only be implemented by the loader and not appear in the adapters
+  interface.
 * A function requires the following sequence of mappings: {`params`}
   - A param requires the following scalar fields: {`desc`, `type`, `name`}
     + `desc` will be used as the params's description comment

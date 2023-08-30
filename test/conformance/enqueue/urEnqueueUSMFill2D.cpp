@@ -1,5 +1,7 @@
 // Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+// Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+// See LICENSE.TXT
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <random>
 #include <uur/fixtures.h>
@@ -36,7 +38,7 @@ struct urEnqueueUSMFill2DTestWithParam
         height = std::get<1>(GetParam()).height;
         pattern_size = std::get<1>(GetParam()).pattern_size;
         pattern = std::vector<uint8_t>(pattern_size);
-        generatePattern();
+        uur::generateMemFillPattern(pattern);
         allocation_size = pitch * height;
         host_mem = std::vector<uint8_t>(allocation_size);
 
@@ -56,19 +58,6 @@ struct urEnqueueUSMFill2DTestWithParam
         }
 
         UUR_RETURN_ON_FATAL_FAILURE(urQueueTestWithParam::TearDown());
-    }
-
-    void generatePattern() {
-
-        const size_t seed = 1;
-        std::mt19937 mersenne_engine{seed};
-        std::uniform_int_distribution<int> dist{0, 255};
-
-        auto gen = [&dist, &mersenne_engine]() {
-            return static_cast<uint8_t>(dist(mersenne_engine));
-        };
-
-        std::generate(begin(pattern), end(pattern), gen);
     }
 
     void verifyData() {
@@ -203,7 +192,6 @@ TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidNullPtr) {
 }
 
 TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidPitch) {
-
     ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, 0, pattern_size,
                                         pattern.data(), width, height, 0,
                                         nullptr, nullptr),
@@ -216,30 +204,30 @@ TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidPitch) {
 }
 
 TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidWidth) {
-
     /* width is 0 */
     ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, pitch, pattern_size,
                                         pattern.data(), 0, height, 0, nullptr,
                                         nullptr),
                      UR_RESULT_ERROR_INVALID_SIZE);
-
-    /* width is not a multiple of pattern_size */
-    ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, pitch, pattern_size,
-                                        pattern.data(), 7, height, 0, nullptr,
-                                        nullptr),
-                     UR_RESULT_ERROR_INVALID_SIZE);
 }
 
 TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidHeight) {
-
+    /* height is 0 */
     ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, pitch, pattern_size,
                                         pattern.data(), width, 0, 0, nullptr,
                                         nullptr),
                      UR_RESULT_ERROR_INVALID_SIZE);
 }
 
-TEST_P(urEnqueueUSMFill2DNegativeTest, OutOfBounds) {
+TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidSize) {
+    /* width * height is not a multiple of pattern_size */
+    ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, pitch, pattern_size,
+                                        pattern.data(), width - 1, width - 1, 0,
+                                        nullptr, nullptr),
+                     UR_RESULT_ERROR_INVALID_SIZE);
+}
 
+TEST_P(urEnqueueUSMFill2DNegativeTest, OutOfBounds) {
     size_t out_of_bounds = pitch * height + 1;
 
     /* Interpret memory as having just one row */
@@ -256,7 +244,6 @@ TEST_P(urEnqueueUSMFill2DNegativeTest, OutOfBounds) {
 }
 
 TEST_P(urEnqueueUSMFill2DNegativeTest, invalidPatternSize) {
-
     /* pattern size is 0 */
     ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, pitch, 0, pattern.data(),
                                         width, 1, 0, nullptr, nullptr),
@@ -274,7 +261,6 @@ TEST_P(urEnqueueUSMFill2DNegativeTest, invalidPatternSize) {
 }
 
 TEST_P(urEnqueueUSMFill2DNegativeTest, InvalidNullPtrEventWaitList) {
-
     ASSERT_EQ_RESULT(urEnqueueUSMFill2D(queue, ptr, pitch, pattern_size,
                                         pattern.data(), width, 1, 1, nullptr,
                                         nullptr),

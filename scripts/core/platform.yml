@@ -1,7 +1,9 @@
 #
 # Copyright (C) 2022 Intel Corporation
 #
-# SPDX-License-Identifier: MIT
+# Part of the Unified-Runtime Project, under the Apache License v2.0 with LLVM Exceptions.
+# See LICENSE.TXT
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # See YaML.md for syntax definition
 #
@@ -11,7 +13,7 @@ desc: "Intel $OneApi Unified Runtime APIs for Platform"
 ordinal: "1"
 --- #--------------------------------------------------------------------------
 type: function
-desc: "Retrieves all available platforms"
+desc: "Retrieves all available platforms for the given adapters"
 class: $xPlatform
 name: Get
 decl: static
@@ -22,6 +24,12 @@ details:
     - "Multiple calls to this function will return identical platforms handles, in the same order."
     - "The application may call this function from simultaneous threads, the implementation must be thread-safe"
 params:
+    - type: "$x_adapter_handle_t*"
+      name: "phAdapters"
+      desc: "[in][range(0, NumAdapters)] array of adapters to query for platforms."
+    - type: "uint32_t"
+      name: "NumAdapters"
+      desc: "[in] number of adapters pointed to by phAdapters"
     - type: "uint32_t"
       name: NumEntries
       desc: |
@@ -96,9 +104,21 @@ params:
             [out][optional][typename(propName, propSize)] array of bytes holding the info.
             If Size is not equal to or greater to the real number of bytes needed to return the info then the $X_RESULT_ERROR_INVALID_SIZE error is returned and pPlatformInfo is not used.
     - type: "size_t*"
-      name: pSizeRet
+      name: pPropSizeRet
       desc: |
             [out][optional] pointer to the actual number of bytes being queried by pPlatformInfo.
+returns:
+    - $X_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
+        - "If `propName` is not supported by the adapter."
+    - $X_RESULT_ERROR_INVALID_SIZE:
+        - "`propSize == 0 && pPropValue != NULL`"
+        - "If `propSize` is less than the real number of bytes needed to return the info."
+    - $X_RESULT_ERROR_INVALID_NULL_POINTER:
+        - "`propSize != 0 && pPropValue == NULL`"
+        - "`pPropValue == NULL && pPropSizeRet == NULL`"
+    - $X_RESULT_ERROR_INVALID_PLATFORM
+    - $X_RESULT_ERROR_OUT_OF_RESOURCES
+    - $X_RESULT_ERROR_OUT_OF_HOST_MEMORY
 --- #--------------------------------------------------------------------------
 type: enum
 desc: "Supported API versions"
@@ -110,6 +130,9 @@ etors:
     - name: "0_6"
       value: "$X_MAKE_VERSION( 0, 6 )"
       desc: "version 0.6"
+    - name: "0_7"
+      value: "$X_MAKE_VERSION( 0, 7 )"
+      desc: "version 0.7"
 --- #--------------------------------------------------------------------------
 type: function
 desc: "Returns the API version supported by the specified platform"
@@ -147,6 +170,9 @@ params:
       name: phNativePlatform
       desc: |
             [out] a pointer to the native handle of the platform.
+returns:
+    - $X_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        - "If the adapter has no underlying equivalent handle."
 --- #--------------------------------------------------------------------------
 type: struct
 desc: "Native platform creation properties"
@@ -174,13 +200,16 @@ details:
 params:
     - type: $x_native_handle_t
       name: hNativePlatform
-      desc: "[in] the native handle of the platform."
+      desc: "[in][nocheck] the native handle of the platform."
     - type: const $x_platform_native_properties_t*
       name: pProperties
       desc: "[in][optional] pointer to native platform properties struct."
     - type: "$x_platform_handle_t*"
       name: phPlatform
       desc: "[out] pointer to the handle of the platform object created."
+returns:
+    - $X_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        - "If the adapter has no underlying equivalent handle."
 --- #--------------------------------------------------------------------------
 type: function
 desc: "Get the platform specific compiler backend option from a generic frontend option."
@@ -207,35 +236,6 @@ returns:
     - $X_RESULT_ERROR_INVALID_VALUE:
       - "If `pFrontendOption` is not a valid frontend option."
 --- #--------------------------------------------------------------------------
-type: function
-desc: "Retrieve string representation of the underlying adapter specific result
-       reported by the the last API that returned UR_RESULT_ADAPTER_SPECIFIC.
-       Allows for an adapter independent way to return an adapter
-       specific result."
-class: $x
-name: GetLastResult
-decl: static
-ordinal: "0"
-details:
-    - "The string returned via the ppMessage is a NULL terminated C style string."
-    - "The string returned via the ppMessage is thread local."
-    - "The entry point will return UR_RESULT_SUCCESS if the result being
-       reported is to be considered a warning. Any other result code returned
-       indicates that the adapter specific result is an error."
-    -  "The memory in the string returned via the ppMessage is owned by the
-       adapter."
-    - "The application may call this function from simultaneous
-       threads."
-    - "The implementation of this function should be lock-free."
-params:
-    - type: $x_platform_handle_t
-      name: hPlatform
-      desc: "[in] handle of the platform instance"
-    - type: const char**
-      name: ppMessage
-      desc: "[out] pointer to a string containing adapter specific result
-             in string representation."
---- #--------------------------------------------------------------------------
 type: enum
 desc: "Identifies native backend adapters"
 class: $xPlatform
@@ -256,3 +256,6 @@ etors:
     - name: HIP
       value: "4"
       desc: "The backend is HIP"
+    - name: NATIVE_CPU
+      value: "5"
+      desc: "The backend is Native CPU"
